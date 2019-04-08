@@ -1,0 +1,1 @@
+In order to build ZZipUpdate you'll need the boost libraries here. You may need to build the statically linked win32 mt libraries as well.

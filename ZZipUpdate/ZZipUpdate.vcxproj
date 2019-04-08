@@ -1,0 +1,224 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>15.0</VCProjectVersion>
+    <ProjectGuid>{F222ECD7-E693-46F9-85E2-C99851E11569}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>ZZipUpdate</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0.15063.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <IncludePath>D:\dev\ZipSandbox;$(VC_IncludePath);$(WindowsSDK_IncludePath);D:\dev\ZipSandbox\openssl\openssl-32\openssl\include</IncludePath>
+    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(NETFXKitsDir)Lib\um\x86;D:\dev\ZipSandbox\openssl\openssl-32\openssl</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);D:\dev\ZipSandbox\openssl\include</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+    <IncludePath>D:\dev\ZipSandbox;$(VC_IncludePath);$(WindowsSDK_IncludePath);D:\dev\ZipSandbox\openssl\openssl-32\openssl\include</IncludePath>
+    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(NETFXKitsDir)Lib\um\x86;D:\dev\ZipSandbox\openssl\openssl-32\openssl</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);D:\dev\ZipSandbox\openssl\include</IncludePath>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>_WIN32_WINNT=0x0501;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions);BOOST_EXCEPTION_DISABLE;BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\ZZip\;$(SolutionDir)..\common\openssl\openssl-32\openssl\include;$(SolutionDir)..\common\zlib-1.2.8;$(SolutionDir)..\common\boost_1_69_0</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <AdditionalLibraryDirectories>$(SolutionDir)..\common\boost_1_69_0\stage\lib;$(SolutionDir)..\common\openssl\openssl-32\openssl</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libssl.lib;libcrypto.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <CustomBuildStep>
+      <Command>
+      </Command>
+    </CustomBuildStep>
+    <PostBuildEvent>
+      <Command>copy $(ProjectDir)..\common\openssl\openssl-32\openssl\libcrypto-1_1.dll $(OutputPath)
+copy $(ProjectDir)..\common\openssl\openssl-32\openssl\libssl-1_1.dll $(OutputPath)</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>D:\dev\ZipSandbox\openssl;D:\dev\ZipSandbox\ZZip\zlib-1.2.8;D:\dev\ZipSandbox\boost_1_66_0</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <AdditionalLibraryDirectories>D:\dev\ZipSandbox\boost_1_66_0\stage\lib;D:\dev\ZipSandbox\openssl\include</AdditionalLibraryDirectories>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>_WIN32_WINNT=0x0501;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\ZZip\;$(SolutionDir)..\common\openssl\openssl-32\openssl\include;$(SolutionDir)..\common\zlib-1.2.8;$(SolutionDir)..\common\boost_1_69_0</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>$(SolutionDir)..\common\boost_1_69_0\stage\lib;$(SolutionDir)..\common\openssl\openssl-32\openssl</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libssl.lib;libcrypto.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <CustomBuildStep>
+      <Command>
+      </Command>
+    </CustomBuildStep>
+    <PostBuildEvent>
+      <Command>copy $(ProjectDir)..\common\openssl\openssl-32\openssl\libcrypto-1_1.dll $(OutputPath)
+copy $(ProjectDir)..\common\openssl\openssl-32\openssl\libssl-1_1.dll $(OutputPath)</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>D:\dev\ZipSandbox\openssl;D:\dev\ZipSandbox\ZZip\zlib-1.2.8;D:\dev\ZipSandbox\boost_1_66_0</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>D:\dev\ZipSandbox\boost_1_66_0\stage\lib;D:\dev\ZipSandbox\openssl\include</AdditionalLibraryDirectories>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\common\Crc32Fast.cpp" />
+    <ClCompile Include="..\common\FNMatch.cpp" />
+    <ClCompile Include="..\common\StringHelpers.cpp" />
+    <ClCompile Include="..\common\zlib-1.2.8\adler32.c" />
+    <ClCompile Include="..\common\zlib-1.2.8\compress.c" />
+    <ClCompile Include="..\common\zlib-1.2.8\crc32.c" />
+    <ClCompile Include="..\common\zlib-1.2.8\deflate.c" />
+    <ClCompile Include="..\common\zlib-1.2.8\gzclose.c" />
+    <ClCompile Include="..\common\zlib-1.2.8\gzlib.c" />
+    <ClCompile Include="..\common\zlib-1.2.8\gzread.c" />
+    <ClCompile Include="..\common\zlib-1.2.8\gzwrite.c" />
+    <ClCompile Include="..\common\zlib-1.2.8\infback.c" />
+    <ClCompile Include="..\common\zlib-1.2.8\inffast.c" />
+    <ClCompile Include="..\common\zlib-1.2.8\inflate.c" />
+    <ClCompile Include="..\common\zlib-1.2.8\inftrees.c" />
+    <ClCompile Include="..\common\zlib-1.2.8\trees.c" />
+    <ClCompile Include="..\common\zlib-1.2.8\uncompr.c" />
+    <ClCompile Include="..\common\zlib-1.2.8\zutil.c" />
+    <ClCompile Include="..\common\ZZFileAPI.cpp" />
+    <ClCompile Include="..\ZZip\ZipHeaders.cpp" />
+    <ClCompile Include="..\ZZip\ZipJob.cpp" />
+    <ClCompile Include="..\ZZip\zlibAPI.cpp" />
+    <ClCompile Include="..\ZZip\ZZipAPI.cpp" />
+    <ClCompile Include="ZZipUpdate_main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\common\Crc32Fast.h" />
+    <ClInclude Include="..\common\FNMatch.h" />
+    <ClInclude Include="..\common\StringHelpers.h" />
+    <ClInclude Include="..\common\thread_pool.hpp" />
+    <ClInclude Include="..\common\zlib-1.2.8\deflate.h" />
+    <ClInclude Include="..\common\zlib-1.2.8\gzguts.h" />
+    <ClInclude Include="..\common\zlib-1.2.8\inffast.h" />
+    <ClInclude Include="..\common\zlib-1.2.8\inffixed.h" />
+    <ClInclude Include="..\common\zlib-1.2.8\inflate.h" />
+    <ClInclude Include="..\common\zlib-1.2.8\inftrees.h" />
+    <ClInclude Include="..\common\zlib-1.2.8\trees.h" />
+    <ClInclude Include="..\common\zlib-1.2.8\zconf.h" />
+    <ClInclude Include="..\common\zlib-1.2.8\zlib.h" />
+    <ClInclude Include="..\common\zlib-1.2.8\zutil.h" />
+    <ClInclude Include="..\common\ZZFileAPI.h" />
+    <ClInclude Include="..\ZZip\ZipHeaders.h" />
+    <ClInclude Include="..\ZZip\ZipJob.h" />
+    <ClInclude Include="..\ZZip\zlibAPI.h" />
+    <ClInclude Include="..\ZZip\ZZipAPI.h" />
+    <ClInclude Include="..\ZZip\ZZipTrackers.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
