@@ -7,8 +7,9 @@ The Windows binary is included.
 
 # Requirements
 
-To build you will need to get ahold of boost. It was build with 1.69.0 but a newer version should not be a problem to use.
-You will also need to get ahold of openssl in order to build boost libraries with SSL support.
+To build you will need to get ahold of boost. It was build with 1.69.0 but a newer version should not be a problem to use. (Check readme.txt in the boost folder for instructions on building your own local libraries.)
+You will also need to get ahold of openssl in order to build boost libraries with SSL support. (Check readme.txt in the openssl folder for instructions. Currently only the win32 build is working.
+zlib version 1.2.8 is included but you can update it if necessary.
 
 
 # Main Features
