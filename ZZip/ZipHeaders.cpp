@@ -279,7 +279,7 @@ bool cEndOfCDRecord::Write(cZZFile& file)
     bSuccess &= file.Write(cZZFile::ZZFILE_NO_SEEK, sizeof(uint16_t), (uint8_t*)&mNumBytesOfComment, nWritten);
 
 
-    bSuccess &= file.Write(cZZFile::ZZFILE_NO_SEEK, mComment.length(), (uint8_t*)mComment.c_str(), nWritten);
+    bSuccess &= file.Write(cZZFile::ZZFILE_NO_SEEK, (uint32_t) mComment.length(), (uint8_t*)mComment.c_str(), nWritten);
 
     if (!bSuccess)
     {

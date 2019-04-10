@@ -45,6 +45,7 @@ You can extract one, all or some wildcard matching set of files from a remotely 
 # Sync
 
 The utility can compare the contents of a locally extracted subtree of files to a zip file (either local or remote) and extract only the files that are different. This can be used for a very fast and easy way of keeping your local files in sync with a published zip archive. Only the ZIP central directory is used for doing the file comparisons so in cases where no files have changed the entire operation can complete in milliseconds. An application could use this functionality on startup to perform a quick self-update.
+Sync can also be used as a form of "repair" for an application in that any locally modified, incomplete or corrupt files can be fixed.
   
 # Diff
 

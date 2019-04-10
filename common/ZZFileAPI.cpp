@@ -427,7 +427,7 @@ bool cHTTPFile::Read(int64_t nOffset, uint32_t nBytes, uint8_t* pDestination, ui
                 if (!ec) responseString.append(buf, buf + bytesTransferred);
             } while (!ec);
 
-            uint32_t nResponseStringLength = responseString.length();
+            uint32_t nResponseStringLength = (uint32_t) responseString.length();
             if (nBytesLeftToRead == nResponseStringLength)
             {
                 memcpy(pBufferWrite, responseString.data(), responseString.length());
@@ -726,7 +726,7 @@ bool cHTTPSFile::Read(int64_t nOffset, uint32_t nBytes, uint8_t* pDestination, u
 				if (!ec) responseString.append(buf, buf + bytesTransferred);
 			} while (!ec);
 
-			uint32_t nResponseStringLength = responseString.length();
+			uint32_t nResponseStringLength = (uint32_t) responseString.length();
 			if (nBytesLeftToRead == nResponseStringLength)
 			{
 				memcpy(pBufferWrite, responseString.data(), responseString.length());
