@@ -88,7 +88,7 @@ bool cZZFile::Close()
 
 bool cZZFile::Read(int64_t nOffset, uint32_t nBytes, uint8_t* pDestination, uint32_t& nBytesRead)
 {
-	std::unique_lock<mutex> lock(mFileReadMutex);
+	std::unique_lock<mutex> lock(mMutex);
 
     mnLastError = kZZfileError_None;
 
@@ -118,7 +118,7 @@ bool cZZFile::Read(int64_t nOffset, uint32_t nBytes, uint8_t* pDestination, uint
 
 bool cZZFile::Write(int64_t nOffset, uint32_t nBytes, uint8_t* pSource, uint32_t& nBytesWritten)
 {
-    std::unique_lock<mutex> lock(mFileReadMutex);
+    std::unique_lock<mutex> lock(mMutex);
 
     mnLastError = kZZfileError_None;
 

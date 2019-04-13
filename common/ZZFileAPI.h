@@ -49,7 +49,7 @@ protected:
 	uint64_t		mnFileSize;
     int64_t         mnLastError;
 
-	mutex			mFileReadMutex;
+	mutex			mMutex;
 };
 
 

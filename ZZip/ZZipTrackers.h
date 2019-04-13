@@ -160,26 +160,18 @@ public:
 
     uint64_t GetElapsedTimeMS()
     {
-        uint64_t nReturn = 0;
         std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
-
-        //        mMutex.lock();
         std::chrono::milliseconds elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds> (now - mStart);
-        //        mMutex.unlock();
 
-        nReturn = elapsed_ms.count();
-
-        return nReturn;
+        return elapsed_ms.count();
     }
 
     uint64_t GetPercentageComplete()
     {
-        //        mMutex.lock();
         if (mnBytesToProcess == 0)
             return 0;
 
         uint64_t nPercentComplete = ((mnBytesProcessed * 100) / mnBytesToProcess);
-        //        mMutex.unlock();
 
         return nPercentComplete;
     }
@@ -187,28 +179,21 @@ public:
     uint64_t GetBytesPerSecond()
     {
         uint64_t nElapsedSeconds = GetElapsedTimeMS() / 1000;
-        uint64_t nReturn = 0;
-        //        mMutex.lock();
         if (nElapsedSeconds > 0)
-            nReturn = mnBytesProcessed / nElapsedSeconds;
-        //        mMutex.unlock();
+            return mnBytesProcessed / nElapsedSeconds;
 
-        return nReturn;
+        return 0;
     }
 
     uint64_t GetEstimatedSecondsRemaining()
     {
         uint64_t nBytesPerSecond = GetBytesPerSecond();
-
-        //        mMutex.lock();
         uint64_t nBytesRemaining = mnBytesToProcess - mnBytesProcessed;
-        //        mMutex.unlock();
 
-        uint64_t nSecondsRemaining = 0;
         if (nBytesPerSecond > 0)
-            nSecondsRemaining = nBytesRemaining / nBytesPerSecond;
+            return  nBytesRemaining / nBytesPerSecond;
 
-        return nSecondsRemaining;
+        return 0;
     }
 
     chrono::time_point<std::chrono::system_clock>   mStart;       // for time tracking
