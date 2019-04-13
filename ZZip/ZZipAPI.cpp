@@ -226,12 +226,11 @@ bool ZZipAPI::ExtractRawStream(const wstring& sFilename, const wstring& sOutputF
     uint8_t* pStream = new uint8_t[kSize];
 
 
-    std::fstream outFile;
-    outFile.open(sOutputFilename, ios_base::out | ios_base::trunc | ios_base::binary);
-    if (outFile.fail())
+    unique_ptr<cZZFile> pOutFile(cZZFile::FileFactory());
+    if (!pOutFile->Open(wstring_to_string(sOutputFilename), true))
     {
         delete[] pStream;
-        wcout << "Failed to open " << sOutputFilename.c_str() << " for extraction. Reason: " << errno << "\n";
+        wcout << "Failed to open " << sOutputFilename.c_str() << " for extraction. Reason: " << pOutFile->GetLastError() << "\n";
         return false;
     }
 
@@ -254,8 +253,8 @@ bool ZZipAPI::ExtractRawStream(const wstring& sFilename, const wstring& sOutputF
             return false;
         }
 
-        outFile.write((const char*)pStream, nBytesToProcess);
-        if (outFile.fail())
+        uint32_t nBytesWritten = 0;
+        if (!pOutFile->Write(cZZFile::ZZFILE_NO_SEEK, (uint32_t) nBytesToProcess, pStream, nBytesWritten))
         {
             delete[] pStream;
             cerr << "Failed to seek to write stream for file " << sFilename.c_str() << " to file " << sOutputFilename.c_str() << ".  Reason: " << errno << "\n";
@@ -268,8 +267,6 @@ bool ZZipAPI::ExtractRawStream(const wstring& sFilename, const wstring& sOutputF
     }
 
     delete[] pStream;
-
-    outFile.close();
 
     //wcout << "Extracted \"" << sFilename.c_str() << "\" to \"" << sOutputFilename.c_str() << "\"\n";
 
@@ -313,9 +310,9 @@ bool ZZipAPI::DecompressToFile(const wstring& sFilename, const wstring& sOutputF
     decompressor.Init();
 
 
-    std::fstream outFile;
-    outFile.open(sOutputFilename, ios_base::out | ios_base::trunc | ios_base::binary);
-    if (outFile.fail())
+    unique_ptr<cZZFile> pOutFile(cZZFile::FileFactory());
+
+    if (!pOutFile->Open(wstring_to_string(sOutputFilename), true))
     {
         delete[] pCompStream;
         wcout << "Failed to open " << sOutputFilename.c_str() << " for extraction. Reason: " << errno << "\n";
@@ -351,11 +348,11 @@ bool ZZipAPI::DecompressToFile(const wstring& sFilename, const wstring& sOutputF
             {
                 nStatus = decompressor.Decompress();
                 uint32_t nDecompressedBytes = (uint32_t)decompressor.GetDecompressedBytes();
-                outFile.write((const char*)decompressor.GetDecompressedBuffer(), decompressor.GetDecompressedBytes());
-                if (outFile.fail())
+                uint32_t nBytesWritten = 0;
+                if (!pOutFile->Write(cZZFile::ZZFILE_NO_SEEK, (uint32_t) decompressor.GetDecompressedBytes(), decompressor.GetDecompressedBuffer(), nBytesWritten))
                 {
                     delete[] pCompStream;
-                    cerr << "Failed to seek to write decompressed stream for file " << sFilename.c_str() << " to file " << sOutputFilename.c_str() << ".  Reason: " << errno << "\n";
+                    cerr << "Failed to seek to write decompressed stream for file " << sFilename.c_str() << " to file " << sOutputFilename.c_str() << ".  Reason: " << pOutFile->GetLastError() << "\n";
                     return false;
                 }
 
@@ -382,8 +379,6 @@ bool ZZipAPI::DecompressToFile(const wstring& sFilename, const wstring& sOutputF
     }
 
     delete[] pCompStream;
-
-    outFile.close();
 
     //wcout << "thread: " << this_thread::get_id() << " Extracted \"" << sFilename.c_str() << "\" to \"" << sOutputFilename.c_str() << "\"\n";
 
@@ -425,30 +420,23 @@ bool ZZipAPI::AddToZipFile(const wstring& sFilename, const wstring& sBaseFolder,
     /////////////////////////////////////////////////
     // Fill in header info
     cLocalFileHeader newLocalHeader;
-    std::fstream inFile;
-    std::streampos nInputFileSize = 0;
+    unique_ptr<cZZFile> pInFile(cZZFile::FileFactory());
 
     if (bInputIsFile)
     {
-        inFile.open(sFileOrFolder, ios_base::in | ios_base::binary);
-        if (inFile.fail())
+        if (!pInFile->Open(wstring_to_string(sFileOrFolder)))
         {
-            wcout << "Failed to open " << sFileOrFolder.c_str() << " for compression. Reason: " << errno << "\n";
+            wcout << "Failed to open " << sFileOrFolder.c_str() << " for compression. Reason: " << pInFile->GetLastError() << "\n";
             return false;
         }
 
-        // Uncompressed Size
-        inFile.seekg(0, ios::end);     // seek to end
-        nInputFileSize = inFile.tellg();
-        inFile.seekg(0, ios::beg);
-
-        newLocalHeader.mUncompressedSize = nInputFileSize;
+        newLocalHeader.mUncompressedSize = pInFile->GetFileSize();
 
         // Date and Time
         std::time_t fileTime = last_write_time(sFileOrFolder);
         newLocalHeader.mLastModificationDate = zip_date_from_std_time(fileTime);
         newLocalHeader.mLastModificationTime = zip_time_from_std_time(fileTime);
-        if (nInputFileSize > 0) // TBD add uncompressed?
+        if (newLocalHeader.mUncompressedSize > 0) // TBD add uncompressed?
             newLocalHeader.mCompressionMethod = 8;  // only deflate supported. 
     }
 
@@ -472,28 +460,24 @@ bool ZZipAPI::AddToZipFile(const wstring& sFilename, const wstring& sBaseFolder,
         ZCompressor compressor;
         compressor.Init(mnCompressionLevel);
 
-        //CRCCalc crcCalc;
         uint32_t nCRC = 0;
-
         uint64_t nBytesProcessed = 0;
-        while (nBytesProcessed < (uint64_t)nInputFileSize)
+        while (nBytesProcessed < pInFile->GetFileSize())
         {
             // Either grab another full block of compressed data or adjust down to the remainder of the compressed stream
             uint64_t nBytesToProcess = kStreamProcessSize;
-            if (nBytesProcessed + nBytesToProcess > (uint64_t) nInputFileSize)
-                nBytesToProcess = (uint64_t)nInputFileSize - nBytesProcessed;
+            if (nBytesProcessed + nBytesToProcess > pInFile->GetFileSize())
+                nBytesToProcess = pInFile->GetFileSize() - nBytesProcessed;
 
-
-            inFile.read((char*)pStream, nBytesToProcess);
-            if (inFile.fail())
+            uint32_t nBytesRead = 0;
+            if (!pInFile->Read(cZZFile::ZZFILE_NO_SEEK, (uint32_t) nBytesToProcess, pStream, nBytesRead))
             {
                 delete[] pStream;
-                cerr << "Failed to read input stream for file " << sFileOrFolder.c_str() << " at offset " << nBytesProcessed << ". Tried to read " << nBytesToProcess << " bytes. Total file size: " << nInputFileSize << "\n";
+                cerr << "Failed to read input stream for file " << sFileOrFolder.c_str() << " at offset " << nBytesProcessed << ". Tried to read " << nBytesToProcess << " bytes. Total file size: " << pInFile->GetFileSize() << "\n";
                 return false;
             }
 
             // Update our CRC calculation
-//            crcCalc.update(pStream, (int32_t)nBytesToProcess);
             nCRC = crc32_16bytes(pStream, (int32_t) nBytesToProcess, nCRC);
 
             compressor.InitStream(pStream, (uint32_t)nBytesToProcess);
@@ -504,7 +488,7 @@ bool ZZipAPI::AddToZipFile(const wstring& sFilename, const wstring& sBaseFolder,
             {
                 if (nStatus == Z_OK)
                 {
-                    bool bFinalBlock = (nBytesProcessed + nBytesToProcess == (uint64_t)nInputFileSize);
+                    bool bFinalBlock = (nBytesProcessed + nBytesToProcess == pInFile->GetFileSize());
                     nStatus = compressor.Compress(bFinalBlock);
                     uint32_t nCompressedBytes = (uint32_t)compressor.GetCompressedBytes();
 
@@ -592,8 +576,6 @@ bool ZZipAPI::AddToZipFileFromBuffer(uint8_t* pInputBuffer, uint32_t nInputBuffe
     /////////////////////////////////////////////////
     // Fill in header info
     cLocalFileHeader newLocalHeader;
-    std::fstream inFile;
-
     newLocalHeader.mUncompressedSize = nInputBufferSize;
 
     // Date and Time
@@ -604,9 +586,6 @@ bool ZZipAPI::AddToZipFileFromBuffer(uint8_t* pInputBuffer, uint32_t nInputBuffe
 
     newLocalHeader.mMinVersionToExtract = kDefaultMinVersionToExtract;
     newLocalHeader.mGeneralPurposeBitFlag = kDefaultGeneralPurposeFlag;
-
-    // TBD CRC after all bytes are processed
-    // TBD compressed size after all bytes are processed
 
     // relative path
     newLocalHeader.mFilename = wstring_to_string(sFilename);
