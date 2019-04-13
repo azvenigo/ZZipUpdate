@@ -60,7 +60,6 @@ public:
     Progress GetProgress() { return mJobProgress; } // makes a copy
 
 private:
-    bool GetHeaderToProcess(cCDFileHeader& header);             // Returns true if there's still work to do
     bool FileNeedsUpdate(const wstring& sPath, uint64_t nComparedFileSize, uint32_t nComparedFileCRC);
 
     static void RunDecompressionJob(void* pContext);
@@ -69,7 +68,6 @@ private:
     static void RunListJob(void* pContext);
 
     tThreadList         mWorkers;
-    tCDFileHeaderList   mCDFileHeaderTODOList;  // List of work to do
     std::mutex          mMutex;
 
     eJobType            mJobType;           

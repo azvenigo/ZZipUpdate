@@ -34,10 +34,6 @@ struct recursive_directory_range
 
 ZipJob::~ZipJob()
 {
-    mMutex.lock();
-    mCDFileHeaderTODOList.clear();      // prevent any further work
-    mMutex.unlock();
-
     // wait for all workers to complete
     for (tThreadList::iterator it = mWorkers.begin(); it != mWorkers.end(); it++)
     {
@@ -80,24 +76,6 @@ bool ZipJob::Run()
 
 
     return true;
-}
-
-
-bool ZipJob::GetHeaderToProcess(cCDFileHeader& header)
-{
-    mMutex.lock();
-    bool bReturn = false;
-
-    if (!mCDFileHeaderTODOList.empty())
-    {
-        header = *mCDFileHeaderTODOList.begin();
-        mCDFileHeaderTODOList.pop_front();
-        bReturn = true;
-    }
-
-    mMutex.unlock();
-
-    return bReturn;
 }
 
 void ZipJob::RunCompressionJob(void* pContext)
