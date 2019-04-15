@@ -113,8 +113,7 @@ bool ZZipAPI::Shutdown()
 
 bool ZZipAPI::OpenForReading()
 {
-    mpZZFile.reset(cZZFile::FileFactory(wstring_to_string(msZipURL)));
-    if (!mpZZFile->Open(wstring_to_string(msZipURL)))
+    if (!cZZFile::Open(msZipURL, cZZFile::ZZFILE_READ, mpZZFile))
     {
         cerr << "Couldn't open file for reading: \"" << msZipURL << "\"\n";
         return false;
@@ -130,8 +129,7 @@ bool ZZipAPI::OpenForReading()
 
 bool ZZipAPI::CreateZipFile()
 {
-    mpZZFile.reset(cZZFile::FileFactory());
-    if (!mpZZFile->Open(wstring_to_string(msZipURL), true))
+    if (!cZZFile::Open(msZipURL, cZZFile::ZZFILE_WRITE, mpZZFile))
     {
         cerr << "Couldn't open file for writing \"" << msZipURL << "\"!\n";
         return false;
@@ -225,9 +223,8 @@ bool ZZipAPI::ExtractRawStream(const wstring& sFilename, const wstring& sOutputF
     const uint32_t kSize = 1024 * 1024;  // one meg at a time
     uint8_t* pStream = new uint8_t[kSize];
 
-
-    unique_ptr<cZZFile> pOutFile(cZZFile::FileFactory());
-    if (!pOutFile->Open(wstring_to_string(sOutputFilename), true))
+    shared_ptr<cZZFile> pOutFile;
+    if (!cZZFile::Open(sOutputFilename, cZZFile::ZZFILE_WRITE, pOutFile))
     {
         delete[] pStream;
         wcout << "Failed to open " << sOutputFilename.c_str() << " for extraction. Reason: " << pOutFile->GetLastError() << "\n";
@@ -309,10 +306,8 @@ bool ZZipAPI::DecompressToFile(const wstring& sFilename, const wstring& sOutputF
     ZDecompressor decompressor;
     decompressor.Init();
 
-
-    unique_ptr<cZZFile> pOutFile(cZZFile::FileFactory());
-
-    if (!pOutFile->Open(wstring_to_string(sOutputFilename), true))
+    shared_ptr<cZZFile> pOutFile;
+    if (!cZZFile::Open(sOutputFilename, cZZFile::ZZFILE_WRITE, pOutFile))
     {
         delete[] pCompStream;
         wcout << "Failed to open " << sOutputFilename.c_str() << " for extraction. Reason: " << errno << "\n";
@@ -420,11 +415,10 @@ bool ZZipAPI::AddToZipFile(const wstring& sFilename, const wstring& sBaseFolder,
     /////////////////////////////////////////////////
     // Fill in header info
     cLocalFileHeader newLocalHeader;
-    unique_ptr<cZZFile> pInFile(cZZFile::FileFactory());
-
+    shared_ptr<cZZFile> pInFile;
     if (bInputIsFile)
     {
-        if (!pInFile->Open(wstring_to_string(sFileOrFolder)))
+        if (!cZZFile::Open(sFileOrFolder, cZZFile::ZZFILE_READ, pInFile))
         {
             wcout << "Failed to open " << sFileOrFolder.c_str() << " for compression. Reason: " << pInFile->GetLastError() << "\n";
             return false;

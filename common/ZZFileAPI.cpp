@@ -34,14 +34,30 @@ enum
 };
 
 
-cZZFile* cZZFile::FileFactory(const string& sURL)
+// Factory
+bool cZZFile::Open(const string& sURL, bool bWrite, shared_ptr<cZZFile>& pFile)
 {
-	if (sURL.substr(0, kHTTPSTag.length()) == kHTTPSTag)
-		return new cHTTPSFile();
-	else if (sURL.substr(0, kHTTPTag.length()) == kHTTPTag)
-		return new cHTTPFile();
+    cZZFile* pNewFile = nullptr;
+    if (sURL.substr(0, kHTTPSTag.length()) == kHTTPSTag)
+    {
+        pNewFile = new cHTTPSFile();
+    }
+    else if (sURL.substr(0, kHTTPTag.length()) == kHTTPTag)
+    {
+        pNewFile = new cHTTPFile();
+    }
+    else
+    {
+        pNewFile = new cZZFileLocal();
+    }
 
-	return new cZZFile();	// all others
+    pFile.reset(pNewFile);
+    return pNewFile->OpenInternal(sURL, bWrite);   // call protected virtualized Open
+}
+
+bool cZZFile::Open(const wstring& sURL, bool bWrite, shared_ptr<cZZFile>& pFile)
+{
+    return Open(string(sURL.begin(), sURL.end()), bWrite, pFile);
 }
 
 
@@ -49,12 +65,16 @@ cZZFile::cZZFile() : mnFileSize(0), mnLastError(kZZfileError_None)
 {
 }
 
-cZZFile::~cZZFile()
+cZZFileLocal::cZZFileLocal() : cZZFile()
 {
-	Close();
 }
 
-bool cZZFile::Open(string sURL, bool bWrite)
+cZZFileLocal::~cZZFileLocal()
+{
+	cZZFileLocal::Close();
+}
+
+bool cZZFileLocal::OpenInternal(string sURL, bool bWrite)
 {
     mnLastError = kZZfileError_None;
 
@@ -78,7 +98,7 @@ bool cZZFile::Open(string sURL, bool bWrite)
 	return true;
 }
 
-bool cZZFile::Close()
+bool cZZFileLocal::Close()
 {
 	mFileStream.close();
     mnLastError = kZZfileError_None;
@@ -86,7 +106,7 @@ bool cZZFile::Close()
 	return true;
 }
 
-bool cZZFile::Read(int64_t nOffset, uint32_t nBytes, uint8_t* pDestination, uint32_t& nBytesRead)
+bool cZZFileLocal::Read(int64_t nOffset, uint32_t nBytes, uint8_t* pDestination, uint32_t& nBytesRead)
 {
 	std::unique_lock<mutex> lock(mMutex);
 
@@ -116,7 +136,7 @@ bool cZZFile::Read(int64_t nOffset, uint32_t nBytes, uint8_t* pDestination, uint
 	return true;
 }
 
-bool cZZFile::Write(int64_t nOffset, uint32_t nBytes, uint8_t* pSource, uint32_t& nBytesWritten)
+bool cZZFileLocal::Write(int64_t nOffset, uint32_t nBytes, uint8_t* pSource, uint32_t& nBytesWritten)
 {
     std::unique_lock<mutex> lock(mMutex);
 
@@ -156,28 +176,6 @@ bool cZZFile::Write(int64_t nOffset, uint32_t nBytes, uint8_t* pSource, uint32_t
     if (nOffsetBeforeWrite + nBytes > mnFileSize)
     {
         mnFileSize = nOffsetBeforeWrite + nBytes;
-
-
-#define VALIDATE_NEW_FILESIZE_CALCULATION
-#ifdef VALIDATE_NEW_FILESIZE_CALCULATION
-        uint64_t nSizeBeforeSeek = mFileStream.tellg();
-        mFileStream.seekg(0, ios::end);
-        uint64_t nSizeVerification = mFileStream.tellg();
-            
-        if (nSizeBeforeSeek != mnFileSize)
-        {
-            int nZero = 0;
-            int breakHere = 5 / nZero;
-        }
-        if (nSizeVerification != mnFileSize)
-        {
-            int nZero = 0;
-            int breakHere = 5 / nZero;
-        }
-
-#endif
-
-
     }
 
     return true;
@@ -191,9 +189,10 @@ cHTTPFile::cHTTPFile() : cZZFile()
 
 cHTTPFile::~cHTTPFile()
 {
+    cHTTPFile::Close();
 }
 
-bool cHTTPFile::Open(string sURL, bool bWrite)       // todo maybe someday use real URI class
+bool cHTTPFile::OpenInternal(string sURL, bool bWrite)       // todo maybe someday use real URI class
 {
     if (bWrite)
     {
@@ -305,20 +304,13 @@ bool cHTTPFile::Open(string sURL, bool bWrite)       // todo maybe someday use r
         return false;
     }
 
-    cout << "Opened server_host:\"" << msHost << "\"\n server_path:\"" << msPath << "\"\n filesize:" << mnFileSize << "\n";
+    cout << "Opened HTTP server_host:\"" << msHost << "\"\n server_path:\"" << msPath << "\"\n filesize:" << mnFileSize << "\n";
 
     return true;
 }
 
 bool cHTTPFile::Close()
 {
-    /*    if (mpSocket)
-    {
-        mpSocket->close();
-        delete mpSocket;
-        mpSocket = NULL;
-    }*/
-
     return true;
 }
 
@@ -485,8 +477,17 @@ bool cHTTPFile::ParseHeaders(list<std::string>& headersList)
 }
 
 
+cHTTPSFile::cHTTPSFile() : cHTTPFile()
+{
+}
 
-bool cHTTPSFile::Open(string sURL, bool bWrite)
+cHTTPSFile::~cHTTPSFile()
+{
+    delete mpSSLContext;
+}
+
+
+bool cHTTPSFile::OpenInternal(string sURL, bool bWrite)
 {
     mnLastError = kZZfileError_None;
     if (bWrite)
@@ -603,14 +604,9 @@ bool cHTTPSFile::Open(string sURL, bool bWrite)
 		return false;
 	}
 
-	cout << "Opened host:\"" << msHost << "\"\n path:\"" << msPath << "\"\n filesize:" << mnFileSize << "\n";
+	cout << "Opened HTTPS host:\"" << msHost << "\"\n path:\"" << msPath << "\"\n filesize:" << mnFileSize << "\n";
 
 	return true;
-}
-
-cHTTPSFile::~cHTTPSFile()
-{
-	delete mpSSLContext;
 }
 
 bool cHTTPSFile::Read(int64_t nOffset, uint32_t nBytes, uint8_t* pDestination, uint32_t& nBytesRead)

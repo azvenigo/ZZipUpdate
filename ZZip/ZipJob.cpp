@@ -211,18 +211,16 @@ void ZipJob::RunDiffJob(void* pContext)
 
     eToStringFormat stringFormat = pZipJob->mOutputFormat;
 
-    shared_ptr<cZZFile> pZZFile(cZZFile::FileFactory(wstring_to_string(pZipJob->msPackageURL)));
-    cZipCD zipCD;
-
     boost::posix_time::ptime  startTime = boost::posix_time::microsec_clock::local_time();
 
-
-    if (pZZFile.get() == nullptr || !pZZFile->Open(wstring_to_string(pZipJob->msPackageURL)))
+    shared_ptr<cZZFile> pZZFile;
+    if (!cZZFile::Open(pZipJob->msPackageURL, cZZFile::ZZFILE_READ, pZZFile))
     {
         pZipJob->mJobStatus.SetError(-1, L"Failed to open URL: \"" + pZipJob->msPackageURL);
         return;
     }
 
+    cZipCD zipCD;
     if (!zipCD.Init(*pZZFile))
     {
         pZipJob->mJobStatus.SetError(-1, L"Failed to read Zip Central Directory from URL: \"" + pZipJob->msPackageURL);
@@ -405,11 +403,11 @@ void ZipJob::RunDiffJob(void* pContext)
 
 bool ZipJob::FileNeedsUpdate(const wstring& sPath, uint64_t nComparedFileSize, uint32_t nComparedFileCRC)
 {
-    unique_ptr<cZZFile> pLocalFile(cZZFile::FileFactory());
-
     if (mbVerbose)
         wcout << "Verifying file " << sPath;
-    if (!pLocalFile->Open(wstring_to_string(sPath)))	// If no local file it clearly needs to be updated
+
+    shared_ptr<cZZFile> pLocalFile;
+    if (!cZZFile::Open(sPath, cZZFile::ZZFILE_READ, pLocalFile))	// If no local file it clearly needs to be updated
     {
         if (mbVerbose)
             wcout << "...missing. NEEDS UPDATE.\n";
@@ -665,14 +663,12 @@ void ZipJob::RunListJob(void* pContext)
     ZipJob* pZipJob = (ZipJob*)pContext;
 
     wstring sURL = pZipJob->msPackageURL;
-    unique_ptr<cZZFile> pZZFile(cZZFile::FileFactory(wstring_to_string(sURL))); 
-    if (!pZZFile)
-        return;
 
     if (pZipJob->mbVerbose)
         wcout << "Running List Job. URL: " << sURL << "\n";
 
-    if (!pZZFile->Open(wstring_to_string(sURL)))
+    shared_ptr<cZZFile> pZZFile;
+    if (!cZZFile::Open(sURL, cZZFile::ZZFILE_READ, pZZFile))
     {
         pZipJob->mJobStatus.SetError(-1, L"Failed to open URL" + sURL);
         return;
