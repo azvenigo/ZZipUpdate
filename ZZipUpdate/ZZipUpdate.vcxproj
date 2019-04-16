@@ -87,6 +87,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -219,7 +220,6 @@ copy $(ProjectDir)..\common\openssl\openssl-64\openssl\libssl-1_1-x64.dll $(Outp
     <ClInclude Include="..\common\zlib-1.2.8\inftrees.h" />
     <ClInclude Include="..\common\zlib-1.2.8\trees.h" />
     <ClInclude Include="..\common\zlib-1.2.8\zconf.h" />
-    <ClInclude Include="..\common\zlib-1.2.8\zlib.h" />
     <ClInclude Include="..\common\zlib-1.2.8\zutil.h" />
     <ClInclude Include="..\common\ZZFileAPI.h" />
     <ClInclude Include="..\ZZip\ZipHeaders.h" />

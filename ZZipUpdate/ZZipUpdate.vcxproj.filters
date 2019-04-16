@@ -104,9 +104,6 @@
     <ClInclude Include="..\common\FNMatch.h">
       <Filter>Helpers</Filter>
     </ClInclude>
-    <ClInclude Include="..\common\zlib-1.2.8\zlib.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\ZZip\ZipHeaders.h">
       <Filter>Header Files</Filter>
     </ClInclude>

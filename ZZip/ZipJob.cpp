@@ -83,7 +83,6 @@ void ZipJob::RunCompressionJob(void* pContext)
     ZipJob* pZipJob = (ZipJob*)pContext;
     if (!pZipJob)
     {
-        pZipJob->mJobStatus.SetError(-1, L"No job context passed in to thread!");
         cerr << "No job context passed in to thread!\n";
         return;
     }

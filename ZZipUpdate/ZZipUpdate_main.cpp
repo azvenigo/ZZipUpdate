@@ -89,20 +89,20 @@ void ParseCommands(int argc, _TCHAR* argv[])
             gbVerbose = true;
 		else if (sParam.find(sOutputFormat) == 0)
 		{
-			string sOutputFormat(sParam.substr(sOutputFormat.length()));
-			if (sOutputFormat == "html")
+			string sFormat(sParam.substr(sOutputFormat.length()));
+			if (sFormat == "html")
 				gOutputFormat = kHTML;
-			else if (sOutputFormat == "tabs")
+			else if (sFormat == "tabs")
 				gOutputFormat = kTabs;
-			else if (sOutputFormat == "commas")
+			else if (sFormat == "commas")
 				gOutputFormat = kCommas;
 			else
 				gOutputFormat = kUnknown;
 		}
 		else if (sParam.find(sThreads) == 0)
 		{
-			string sThreads(sParam.substr(sThreads.length()));
-			gNumThreads = boost::lexical_cast<int32_t> (sThreads);
+			string sNumThreads(sParam.substr(sThreads.length()));
+			gNumThreads = boost::lexical_cast<int32_t> (sNumThreads);
 		}
 	};
 
@@ -117,7 +117,6 @@ int _tmain(int argc, _TCHAR* argv[])
 //	_CrtMemCheckpoint(&s1);
 
 
-	int nReturn = 0;
 	ParseCommands(argc, argv);
 
 	// validate commands
@@ -188,7 +187,7 @@ int _tmain(int argc, _TCHAR* argv[])
 //	_CrtMemDumpStatistics(&s1);  
 //	_CrtDumpMemoryLeaks();
 
-	return nReturn;
+	return 0;
 
 }
 
