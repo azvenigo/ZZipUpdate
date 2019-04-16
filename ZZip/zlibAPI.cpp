@@ -123,8 +123,6 @@ int32_t ZDecompressor::Decompress()
 
     mnOutputAvailable = 0;
 
-    int32_t totalBytesDecompressed = 0;
-
     if (mpZStream->avail_in > 0 || mbFinalPass)
     {
         mpZStream->next_out = (uint8_t*)(mpOutputBuffer);

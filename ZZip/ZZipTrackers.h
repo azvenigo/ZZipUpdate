@@ -205,6 +205,7 @@ public:
 class JobStatus
 {
 public:
+
     enum eJobStatus
     {
         kError = -1,
@@ -213,26 +214,55 @@ public:
         kFinished = 2
     };
 
-    JobStatus() : mStatus(kNone), mOSErrorCode(0) {}
+    enum eJobError
+    {
+        kError_None = 0,
+        kError_Undefined = -1,
+        kError_NotFound = -2,
+        kError_OpenFailed = -3,
+        kError_ReadFailed = -4
+    };
 
-    JobStatus(eJobStatus status, uint32_t osErrorCode, wstring sErrorMessage) : mStatus(status), mOSErrorCode(osErrorCode), msErrorMessage(sErrorMessage) {}
+
+    JobStatus() : mStatus(kNone), mErrorCode(0) {}
+
+    JobStatus(eJobStatus status, int32_t errorCode, wstring sErrorMessage) : mStatus(status), mErrorCode(errorCode), msErrorMessage(sErrorMessage) {}
 
     JobStatus(const JobStatus& rhs)
     {
         mStatus = rhs.mStatus;
-        mOSErrorCode = rhs.mOSErrorCode;
+        mErrorCode = rhs.mErrorCode;
         msErrorMessage = rhs.msErrorMessage;
     }
 
-    void SetError(uint32_t osErrorCode, wstring sErrorMessage = L"")
+
+    friend ostream& operator << (ostream& os, const JobStatus& jobStatus)
+    {
+        os << "Status:";
+        switch (jobStatus.mStatus)
+        {
+        case kNone:     os << "None"; return os;
+        case kRunning:  os << "Running"; return os;
+        case kFinished: os << "Finished"; return os;
+        }
+
+        if (jobStatus.mStatus == kError)
+            os << "Error Code:" << jobStatus.mErrorCode << " - " << wstring_to_string(jobStatus.msErrorMessage).c_str();
+
+        return os;
+
+    };
+
+
+    void SetError(int32_t osErrorCode, wstring sErrorMessage = L"")
     {
         mStatus = kError;
-        mOSErrorCode = osErrorCode;
+        mErrorCode = osErrorCode;
         msErrorMessage = sErrorMessage;
     }
 
     eJobStatus      mStatus;
-    uint32_t        mOSErrorCode;
+    int32_t         mErrorCode;
     wstring         msErrorMessage;
 };
 

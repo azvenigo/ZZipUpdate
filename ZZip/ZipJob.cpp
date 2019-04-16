@@ -95,7 +95,7 @@ void ZipJob::RunCompressionJob(void* pContext)
 
     if (!exists(pZipJob->msBaseFolder))
     {
-        pZipJob->mJobStatus.SetError(-1, L"Folder \"" + pZipJob->msBaseFolder + L"\" not found!");
+        pZipJob->mJobStatus.SetError(JobStatus::kError_NotFound, L"Folder \"" + pZipJob->msBaseFolder + L"\" not found!");
         cerr << "Folder \"" << pZipJob->msBaseFolder << "\" not found!\n";
         return;
     }
@@ -103,8 +103,8 @@ void ZipJob::RunCompressionJob(void* pContext)
     ZZipAPI zipAPI;
     if (!zipAPI.Init(pZipJob->msPackageURL, ZZipAPI::kZipCreate))
     {
-        pZipJob->mJobStatus.SetError(-1, L"Couldn't Open " + pZipJob->msPackageURL + L" for Decompression Job!");
-        wcerr << "Couldn't Open " << pZipJob->msPackageURL << " for Decompression Job!" << std::endl;
+        pZipJob->mJobStatus.SetError(JobStatus::kError_OpenFailed, L"Couldn't create package:\"" + pZipJob->msPackageURL + L"\" for compression Job!");
+        //wcerr << "Couldn't Open " << pZipJob->msPackageURL << " for Decompression Job!" << std::endl;
         return;
     }
 
@@ -215,14 +215,14 @@ void ZipJob::RunDiffJob(void* pContext)
     shared_ptr<cZZFile> pZZFile;
     if (!cZZFile::Open(pZipJob->msPackageURL, cZZFile::ZZFILE_READ, pZZFile))
     {
-        pZipJob->mJobStatus.SetError(-1, L"Failed to open URL: \"" + pZipJob->msPackageURL);
+        pZipJob->mJobStatus.SetError(JobStatus::kError_OpenFailed, L"Failed to open package: \"" + pZipJob->msPackageURL + L"\"");
         return;
     }
 
     cZipCD zipCD;
     if (!zipCD.Init(*pZZFile))
     {
-        pZipJob->mJobStatus.SetError(-1, L"Failed to read Zip Central Directory from URL: \"" + pZipJob->msPackageURL);
+        pZipJob->mJobStatus.SetError(JobStatus::kError_ReadFailed, L"Failed to read Zip Central Directory from package: \"" + pZipJob->msPackageURL + L"\"");
         return;
     }
 
@@ -470,7 +470,7 @@ void ZipJob::RunDecompressionJob(void* pContext)
     ZZipAPI zipAPI;
     if (!zipAPI.Init(pZipJob->msPackageURL))
     {
-        pZipJob->mJobStatus.SetError(-1, L"Couldn't Open " + pZipJob->msPackageURL + L" for Decompression Job!");
+        pZipJob->mJobStatus.SetError(JobStatus::kError_OpenFailed, L"Couldn't Open package:\"" + pZipJob->msPackageURL + L"\" for Decompression Job!");
         return;
     }
 
@@ -664,19 +664,19 @@ void ZipJob::RunListJob(void* pContext)
     wstring sURL = pZipJob->msPackageURL;
 
     if (pZipJob->mbVerbose)
-        wcout << "Running List Job. URL: " << sURL << "\n";
+        wcout << "Running List Job. Package: " << sURL << "\n";
 
     shared_ptr<cZZFile> pZZFile;
     if (!cZZFile::Open(sURL, cZZFile::ZZFILE_READ, pZZFile))
     {
-        pZipJob->mJobStatus.SetError(-1, L"Failed to open URL" + sURL);
+        pZipJob->mJobStatus.SetError(JobStatus::kError_OpenFailed, L"Failed to open package: \"" + sURL + L"\"");
         return;
     }
 
     cZipCD zipCD;
     if (!zipCD.Init(*pZZFile))
     {
-        pZipJob->mJobStatus.SetError(-1, L"Failed to read Zip Central Directory from URL: \"" + sURL);
+        pZipJob->mJobStatus.SetError(JobStatus::kError_ReadFailed, L"Failed to read Zip Central Directory from package: \"" + sURL + L"\"");
         return;
     }
 
@@ -708,6 +708,8 @@ bool ZipJob::Join()
         pThread->join();
         delete pThread;
     }
+
+    cout << mJobStatus << "\n";
 
     mWorkers.clear();
 

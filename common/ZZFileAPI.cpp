@@ -203,10 +203,6 @@ bool cHTTPFile::OpenInternal(string sURL, bool bWrite)       // todo maybe somed
 
     bool bShowHeaders = false;
 
-    // for now we'll only use it with a host/path format
-
-	bool bHTTPS = false;
-
     // Ensure this isn't an HTTPS request
 	if (sURL.substr(0, kHTTPSTag.length()) == kHTTPSTag)
 	{
@@ -419,7 +415,7 @@ bool cHTTPFile::Read(int64_t nOffset, uint32_t nBytes, uint8_t* pDestination, ui
                 if (!ec) responseString.append(buf, buf + bytesTransferred);
             } while (!ec);
 
-            uint32_t nResponseStringLength = (uint32_t) responseString.length();
+            int32_t nResponseStringLength = (int32_t) responseString.length();
             if (nBytesLeftToRead == nResponseStringLength)
             {
                 memcpy(pBufferWrite, responseString.data(), responseString.length());
@@ -498,10 +494,6 @@ bool cHTTPSFile::OpenInternal(string sURL, bool bWrite)
     }
 
 	bool bShowHeaders = false;
-
-	// for now we'll only use it with a host/path format
-
-	bool bHTTPS = false;
 
 	// Strip off "http://" if needed
 	if (sURL.substr(0, kHTTPTag.length()) == kHTTPSTag)
@@ -722,7 +714,7 @@ bool cHTTPSFile::Read(int64_t nOffset, uint32_t nBytes, uint8_t* pDestination, u
 				if (!ec) responseString.append(buf, buf + bytesTransferred);
 			} while (!ec);
 
-			uint32_t nResponseStringLength = (uint32_t) responseString.length();
+			int32_t nResponseStringLength = (int32_t) responseString.length();
 			if (nBytesLeftToRead == nResponseStringLength)
 			{
 				memcpy(pBufferWrite, responseString.data(), responseString.length());
