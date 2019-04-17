@@ -15,16 +15,18 @@ zlib version 1.2.8 is included but you can update it if necessary.
 # Main Features
 
 * Cross Platform
+  * Uses boost for file IO and networking.
+  * Uses OpenSSL for TLS support.
 * ZIP file support
-* ZIP64 support (for very large zip archives.)
-* Simple use and simple code to use in your own projects. Perform in-memory or disk to disk compression/decompression.
-* Deflate support
-* Multithreaded, job system based.
-* Supports HTTP and HTTPS connections.
+  * ZIP64 support (for very large zip archives.)
+  * Deflate support
+* Simple use and simple code to use in your own projects. 
+  * Perform in-memory or disk to disk compression/decompression.
+* Secure and flexible
+  * Supports HTTP and HTTPS connections.
 * Very fast
-* Uses boost for file IO and networking.
-* Uses OpenSSL for TLS support.
-* Uses FastCRC for very fast CRC calculation.
+  * Multithreaded, job system based.
+  * Uses FastCRC for very fast CRC calculation.
 
 
 # Multithreaded
@@ -52,7 +54,15 @@ Sync can also be used as a form of "repair" for an application in that any local
 
   The utility can diff files in a local subtree and zip file and report what's different. Which files/folders exist only on the disk vs which ones are only in the ZIP archive and which are different.
   The reports can be output in tab, commas or HTML for easy reading or use by other applications.
+
+# Examine
+  The utility can list the contents of ZIP archives without downloading them.
+
+# Asset Update
+  You can embed the code in your own application to perform updates of assets at any time, on startup or on demand.
   
+# Self Update
+  The utility can be used for your application to do a fast self update. See "Usage" for details.
 
 # Work in Progress
  It's a work in progres so there are still features I would love to add or see added.
