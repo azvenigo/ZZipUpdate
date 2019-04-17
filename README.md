@@ -14,6 +14,7 @@ zlib version 1.2.8 is included but you can update it if necessary.
 
 # Main Features
 
+* Cross Platform
 * ZIP file support
 * ZIP64 support (for very large zip archives.)
 * Simple use and simple code to use in your own projects. Perform in-memory or disk to disk compression/decompression.
@@ -57,47 +58,10 @@ Sync can also be used as a form of "repair" for an application in that any local
  It's a work in progres so there are still features I would love to add or see added.
  -Unicode support
  -Additional compression methods
+ -Support for killing applications holding files open during extraction
 
+# Usage
+Check the Wiki page: https://github.com/azvenigo/ZZipUpdate/wiki
 
-# ZZipUpdate.exe Usage Examples
-
-The following will download any files missing or different from c:/example that are in the package:
-    
-    ZZipUpdate.exe -sync -pkg:https://www.mysecuresite.com/latest/files.zip -path:c:/example
-
-The following will extract all jpg files with 8 threads:
-    
-    ZZipUpdate.exe -extract -pkg:d:/downloads/pictures.zip -path:c:/albums -threads:8 -pattern:*.jpg
-
-The follwing will report differences between a path and a package and create an HTML report called results.html:
-
-    ZZipUpdate.exe -diff -pkg:http://www.mysite.com/game_1.5.2.zip -path:"c:/Program Files (x86)/Game/" -outputformat:html > results.html
-
-The following will list the contents of a zip file on a server in a comma delimited format
-
-    ZZipUpdate.exe -list -pkg:https://www.mysite.com/sample.zip -outputformat:commas
-
-The following will create a new zip archive and all JPG files that contain "Maui" in the specified path:
-
-    ZZipUpdate.exe -create -pkg:c:/temp/mytrip.zip -path:"f:\My Albums\2019\Hawaii Trip\" -pattern:*Maui*.jpg
-
-
-# Code Usage Examples
-
-There are several ways in which you can use these classes.
-At the highest level you can instantiate a ZZipJob object, configure it and let it run. Querying it for status or calling Join when you want to wait for it to complete.
-
-    ZipJob newJob(ZipJob::kExtract);
-    newJob.SetBaseFolder(L"c:/output");
-    newJob.SetURL(L"c:/downloads/files.zip");
-    newJob.Run();
-    newJob.Join();
-
-
-You can also use ZZipAPI directly:
-
-    ZZipAPI zipAPI;
-    zipAPI.Init(L"http://www.sample.net/files.zip");
-    zipAPI.DecompressToBuffer("readme.txt", pOutputBuffer);
 
 
