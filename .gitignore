@@ -38,3 +38,7 @@
 *.pdb
 *.log
 *.idb
+
+ZZipUpdate/Debug/
+ZZipUpdate/Release/
+ZZipUpdate/x64/
