@@ -93,6 +93,9 @@
     <ClCompile Include="..\common\zlib-1.2.8\crc32.c">
       <Filter>zlib</Filter>
     </ClCompile>
+    <ClCompile Include="..\common\HTTPCache.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\common\StringHelpers.h">
@@ -150,6 +153,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\common\Crc32Fast.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\HTTPCache.h">
       <Filter>Helpers</Filter>
     </ClInclude>
   </ItemGroup>

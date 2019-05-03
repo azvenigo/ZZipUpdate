@@ -8,7 +8,7 @@ If you want to save quite a bit of time and space building boost I recommend bui
 **Instructions as follow for building with Visual Studio 2017**
 
 1) Get ahold of the latest boost build. 
-    - At the time of this doc it's 1.70)
+    - At the time of this doc it's 1.70
 
 2) Extract into the boost folder in the project
     - In this example: %project_path%/common/boost_1_70_0/

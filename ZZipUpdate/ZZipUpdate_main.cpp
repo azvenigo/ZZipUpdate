@@ -116,7 +116,6 @@ int _tmain(int argc, _TCHAR* argv[])
 //	_CrtMemState s1;
 //	_CrtMemCheckpoint(&s1);
 
-
 	ParseCommands(argc, argv);
 
 	// validate commands

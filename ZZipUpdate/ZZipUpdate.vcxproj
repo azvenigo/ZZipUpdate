@@ -184,6 +184,7 @@ copy $(ProjectDir)..\common\openssl\openssl-64\openssl\libssl-1_1-x64.dll $(Outp
   <ItemGroup>
     <ClCompile Include="..\common\Crc32Fast.cpp" />
     <ClCompile Include="..\common\FNMatch.cpp" />
+    <ClCompile Include="..\common\HTTPCache.cpp" />
     <ClCompile Include="..\common\StringHelpers.cpp" />
     <ClCompile Include="..\common\zlib-1.2.8\adler32.c" />
     <ClCompile Include="..\common\zlib-1.2.8\compress.c" />
@@ -210,6 +211,7 @@ copy $(ProjectDir)..\common\openssl\openssl-64\openssl\libssl-1_1-x64.dll $(Outp
   <ItemGroup>
     <ClInclude Include="..\common\Crc32Fast.h" />
     <ClInclude Include="..\common\FNMatch.h" />
+    <ClInclude Include="..\common\HTTPCache.h" />
     <ClInclude Include="..\common\StringHelpers.h" />
     <ClInclude Include="..\common\thread_pool.hpp" />
     <ClInclude Include="..\common\zlib-1.2.8\deflate.h" />

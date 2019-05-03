@@ -25,6 +25,7 @@
 #include <fstream>
 #include <atomic>
 #include <mutex>
+#include "HTTPCache.h"
 
 using namespace std;
 
@@ -84,6 +85,11 @@ protected:
 	mutex           mMutex;
 };
 
+
+
+
+
+
 //////////////////////////////////////////////////////////////////////////////////////////
 class cHTTPFile : public cZZFile
 {
@@ -104,6 +110,8 @@ protected:
     string          msHost;
 
     boost::asio::io_service mIOService;
+
+    HTTPCache   mCache;     // for caching requests
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////

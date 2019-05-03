@@ -17,13 +17,11 @@
 using namespace std;
 using namespace boost::asio;
 using boost::asio::ip::tcp;
-//using namespace StringHelpers;
 
 const string kHTTPTag("http://");
 const string kHTTPSTag("https://");
 
-
-enum 
+enum
 {
     kZZfileError_None           = 0,
     kZZFileError_Exception      = -5001,
@@ -71,7 +69,7 @@ cZZFileLocal::cZZFileLocal() : cZZFile()
 
 cZZFileLocal::~cZZFileLocal()
 {
-	cZZFileLocal::Close();
+    cZZFileLocal::Close();
 }
 
 bool cZZFileLocal::OpenInternal(string sURL, bool bWrite)
@@ -81,34 +79,34 @@ bool cZZFileLocal::OpenInternal(string sURL, bool bWrite)
     if (bWrite)
         mFileStream.open(sURL, ios_base::in | ios_base::out | ios_base::binary | ios_base::trunc);
     else
-	    mFileStream.open(sURL, ios_base::in | ios_base::binary);
+        mFileStream.open(sURL, ios_base::in | ios_base::binary);
 
-	if (mFileStream.fail())
-	{
+    if (mFileStream.fail())
+    {
         mnLastError = errno;
-//		cerr << "Failed to open file:" << sURL.c_str() << "! Reason: " << errno << "\n";
-		return false;
-	}
+        //		cerr << "Failed to open file:" << sURL.c_str() << "! Reason: " << errno << "\n";
+        return false;
+    }
 
-	mFileStream.seekg(0, ios::end);     // seek to end
-	mnFileSize = mFileStream.tellg();
+    mFileStream.seekg(0, ios::end);     // seek to end
+    mnFileSize = mFileStream.tellg();
 
-	mFileStream.seekg(0, ios::beg);
+    mFileStream.seekg(0, ios::beg);
 
-	return true;
+    return true;
 }
 
 bool cZZFileLocal::Close()
 {
-	mFileStream.close();
+    mFileStream.close();
     mnLastError = kZZfileError_None;
 
-	return true;
+    return true;
 }
 
 bool cZZFileLocal::Read(int64_t nOffset, uint32_t nBytes, uint8_t* pDestination, uint32_t& nBytesRead)
 {
-	std::unique_lock<mutex> lock(mMutex);
+    std::unique_lock<mutex> lock(mMutex);
 
     mnLastError = kZZfileError_None;
 
@@ -123,17 +121,17 @@ bool cZZFileLocal::Read(int64_t nOffset, uint32_t nBytes, uint8_t* pDestination,
         }
     }
 
-	mFileStream.read((char*)pDestination, nBytes);
-    uint32_t nRead = (uint32_t) mFileStream.gcount();
+    mFileStream.read((char*)pDestination, nBytes);
+    uint32_t nRead = (uint32_t)mFileStream.gcount();
     if (mFileStream.fail() && nRead == 0)
-	{
+    {
         mnLastError = errno;
         cerr << "Failed to read " << nBytes << " bytes reason:" << mnLastError << "\n";
-		return false;
-	}
+        return false;
+    }
 
     nBytesRead = nRead;
-	return true;
+    return true;
 }
 
 bool cZZFileLocal::Write(int64_t nOffset, uint32_t nBytes, uint8_t* pSource, uint32_t& nBytesWritten)
@@ -204,30 +202,30 @@ bool cHTTPFile::OpenInternal(string sURL, bool bWrite)       // todo maybe somed
     bool bShowHeaders = false;
 
     // Ensure this isn't an HTTPS request
-	if (sURL.substr(0, kHTTPSTag.length()) == kHTTPSTag)
-	{
+    if (sURL.substr(0, kHTTPSTag.length()) == kHTTPSTag)
+    {
         mnLastError = kZZFileError_URL_Error;
         std::cout << "Attempting to open SSL URL with cHTTP instead of cHTTPS.\n";
-		return false;
-	}
+        return false;
+    }
 
-	sURL = sURL.substr(kHTTPTag.length());		// strip off the "http://"
-	msHost = sURL.substr(0, sURL.find_first_of("/"));
+    sURL = sURL.substr(kHTTPTag.length());		// strip off the "http://"
+    msHost = sURL.substr(0, sURL.find_first_of("/"));
     msPath = sURL.substr(msHost.length());
 
-	// Resolve the domain name
-	tcp::resolver resolver(mIOService);
-	std::auto_ptr<tcp::resolver::query> pQuery(new tcp::resolver::query(msHost, "http"));
-	tcp::resolver::iterator ipIterator = resolver.resolve(*pQuery);
+    // Resolve the domain name
+    tcp::resolver resolver(mIOService);
+    std::auto_ptr<tcp::resolver::query> pQuery(new tcp::resolver::query(msHost, "http"));
+    tcp::resolver::iterator ipIterator = resolver.resolve(*pQuery);
 
-	boost::asio::ip::tcp::socket sock(mIOService);
-	boost::asio::connect(sock, ipIterator);
+    boost::asio::ip::tcp::socket sock(mIOService);
+    boost::asio::connect(sock, ipIterator);
 
-	// Retrieve headers
+    // Retrieve headers
     try
     {
         // Form the request
-		boost::asio::streambuf request;
+        boost::asio::streambuf request;
         std::ostream request_stream(&request);
 
         request_stream << "GET " << msPath << " HTTP/1.1\r\n";
@@ -242,7 +240,7 @@ bool cHTTPFile::OpenInternal(string sURL, bool bWrite)       // todo maybe somed
 
 
         // read the first line
-		boost::asio::streambuf response;
+        boost::asio::streambuf response;
         boost::asio::read_until(sock, response, "\r\n");
 
         // check response
@@ -305,8 +303,15 @@ bool cHTTPFile::OpenInternal(string sURL, bool bWrite)       // todo maybe somed
     return true;
 }
 
+// Tracking stats
+atomic<int64_t> gnTotalHTTPBytesRequested = 0;
+atomic<int64_t> gnTotalRequestsIssued = 0;
+
 bool cHTTPFile::Close()
 {
+    //cout << "Total HTTP Requests:" << gnTotalRequestsIssued << "\n";
+    //cout << "Total HTTP bytes requested:" << gnTotalHTTPBytesRequested << "\n";
+
     return true;
 }
 
@@ -315,126 +320,169 @@ bool cHTTPFile::Read(int64_t nOffset, uint32_t nBytes, uint8_t* pDestination, ui
 {
     mnLastError = kZZfileError_None;
 
+    bool bUseCache = false;
+    int64_t nOffsetToRequest = nOffset;
+    uint32_t nBytesToRequest = nBytes;
     uint8_t* pBufferWrite = pDestination;
-    bool bShowHeaders = false;
-    try
+    shared_ptr<HTTPCacheLine> cacheLine;
+
+
+    if (nBytesToRequest < kHTTPCacheLineSize && (uint64_t)nOffset + (uint64_t)kHTTPCacheLineSize < mnFileSize)
+        bUseCache = true;
+
+    if (bUseCache)
     {
-        // Resolve the domain name
-        tcp::resolver resolver(mIOService);
-        tcp::resolver::query query(msHost, "http");
-        tcp::resolver::iterator ipIterator = resolver.resolve(query);
-
-        boost::asio::ip::tcp::socket sock(mIOService);
-        boost::asio::connect(sock, ipIterator);
-
-
-        // Form the request
-        boost::asio::streambuf request;
-        std::ostream request_stream(&request);
-
-        request_stream << "GET " << msPath << " HTTP/1.1\r\n";
-        request_stream << "Host: " << msHost << "\r\n";
-        request_stream << "Accept: */*\r\n";
-        request_stream << "Cache-Control: no-cache\r\n";
-        request_stream << "Range: bytes=" << nOffset << "-" << nOffset + nBytes-1 << "\r\n";
-        request_stream << "Connection: close\r\n\r\n";
-        request_stream.flush();
-
-        // Fire it off
-        boost::asio::write(sock, request);
-
-
-
-
-        // read the first line
-        boost::asio::streambuf response;
-        boost::asio::read_until(sock, response, "\r\n");
-
-        // check response
-        std::istream response_stream(&response);
-        std::string http_version;
-
-        response_stream >> http_version;
-
-        uint32_t nHTTPStatusCode = 0;
-        response_stream >> nHTTPStatusCode;
-
-        string sStatusString;
-        getline(response_stream, sStatusString);
-
-        if (!response_stream || http_version.substr(0, 5) != "HTTP/")
+        bool bNew = mCache.CheckOrReserve(nOffset, nBytes, cacheLine);           // If a cache line that would contain this data hasn't already been requested this will reserve one and return it
+        if (!bNew)
         {
-            mnLastError = nHTTPStatusCode;
-            cout << "Invalid response\n";
-            return false;
-        }
-        if (!(nHTTPStatusCode == 200 || nHTTPStatusCode == 206))
-        {
-            mnLastError = nHTTPStatusCode;
-            cout << "Response Status Code " << nHTTPStatusCode << " message: \"" << sStatusString << "\"\n";
-            return false;
+            cacheLine->Get(nOffset, nBytes, pDestination);      // this may block if the line is pending
+            nBytesRead = nBytes;
+
+            //cout << "HTTP Data read from cache...Requested:" << nBytes << "b at offset:" << nOffset << "\n";
+            return true;
         }
 
-        // get headers
-        boost::asio::read_until(sock, response, "\r\n\r\n");
+        int64_t nUnfullfilledBytes = cacheLine->mUnfullfilledInterval.second - cacheLine->mUnfullfilledInterval.first;
+        assert(!cacheLine->mbCommitted);
 
-        list<std::string> headersList;
+        nOffsetToRequest = cacheLine->mUnfullfilledInterval.first;
+        nBytesToRequest = (uint32_t)nUnfullfilledBytes;
+        int64_t nOffsetIntoCacheLine = nOffsetToRequest - cacheLine->mnBaseOffset;
 
-        string sHeader;
-        while (std::getline(response_stream, sHeader) && sHeader != "\r")
+        pBufferWrite = &cacheLine->mData[nOffsetIntoCacheLine];
+    }
+
+    if (nBytesToRequest > 0)
+    {
+        bool bShowHeaders = false;
+        try
         {
-            // strip off any trailing '\r'
-            if (sHeader.substr(sHeader.length() - 1) == "\r")
-                sHeader = sHeader.substr(0, sHeader.length() - 1);
-            // strip off any trailing '\n'
-            if (sHeader.substr(sHeader.length() - 1) == "\n")
-                sHeader = sHeader.substr(0, sHeader.length() - 1);
+            // Resolve the domain name
+            tcp::resolver resolver(mIOService);
+            tcp::resolver::query query(msHost, "http");
+            tcp::resolver::iterator ipIterator = resolver.resolve(query);
+
+            boost::asio::ip::tcp::socket sock(mIOService);
+            boost::asio::connect(sock, ipIterator);
 
 
-            headersList.push_back(sHeader);
-            if (bShowHeaders)
-                cout << "header: \"" << sHeader << "\"\n";
-        }
+            // Form the request
+            boost::asio::streambuf request;
+            std::ostream request_stream(&request);
 
+            request_stream << "GET " << msPath << " HTTP/1.1\r\n";
+            request_stream << "Host: " << msHost << "\r\n";
+            request_stream << "Accept: */*\r\n";
+            request_stream << "Cache-Control: no-cache\r\n";
+            request_stream << "Range: bytes=" << nOffsetToRequest << "-" << nOffsetToRequest + nBytesToRequest - 1 << "\r\n";
+            request_stream << "Connection: close\r\n\r\n";
+            request_stream.flush();
 
-        {
+            // Fire it off
+            boost::asio::write(sock, request);
 
-            std::string responseString;
+            gnTotalHTTPBytesRequested += nBytesToRequest;
+            gnTotalRequestsIssued++;
 
-            // Now read the data
-            int32_t nBytesLeftToRead = (int32_t) nBytes;
-            response_stream.read((char*)pBufferWrite, nBytes);    // copy as many bytes as we can to the destination buffer
-            nBytesRead = (uint32_t)response_stream.gcount();  // get how many bytes of file data we've read so far
-            nBytesLeftToRead -= nBytesRead;
-            pBufferWrite += nBytesRead;     // advance the pointer to the write buffer
+            // read the first line
+            boost::asio::streambuf response;
+            boost::asio::read_until(sock, response, "\r\n");
 
-            char buf[1024];
-            boost::system::error_code ec;
-            do {
-                size_t bytesTransferred = sock.receive(boost::asio::buffer(buf), {}, ec);
-                if (!ec) responseString.append(buf, buf + bytesTransferred);
-            } while (!ec);
+            // check response
+            std::istream response_stream(&response);
+            std::string http_version;
 
-            int32_t nResponseStringLength = (int32_t) responseString.length();
-            if (nBytesLeftToRead == nResponseStringLength)
+            response_stream >> http_version;
+
+            uint32_t nHTTPStatusCode = 0;
+            response_stream >> nHTTPStatusCode;
+
+            string sStatusString;
+            getline(response_stream, sStatusString);
+
+            if (!response_stream || http_version.substr(0, 5) != "HTTP/")
             {
-                memcpy(pBufferWrite, responseString.data(), responseString.length());
-                nBytesRead = nBytes;
-            }
-            else
-            {
-                mnLastError = ec.value();
-                cout << "Didn't get right number of bytes!\n";
+                mnLastError = nHTTPStatusCode;
+                cout << "Invalid response\n";
                 return false;
             }
+            if (!(nHTTPStatusCode == 200 || nHTTPStatusCode == 206))
+            {
+                mnLastError = nHTTPStatusCode;
+                cout << "Response Status Code " << nHTTPStatusCode << " message: \"" << sStatusString << "\"\n";
+                return false;
+            }
+
+            // get headers
+            boost::asio::read_until(sock, response, "\r\n\r\n");
+
+            list<std::string> headersList;
+
+            string sHeader;
+            while (std::getline(response_stream, sHeader) && sHeader != "\r")
+            {
+                // strip off any trailing '\r'
+                if (sHeader.substr(sHeader.length() - 1) == "\r")
+                    sHeader = sHeader.substr(0, sHeader.length() - 1);
+                // strip off any trailing '\n'
+                if (sHeader.substr(sHeader.length() - 1) == "\n")
+                    sHeader = sHeader.substr(0, sHeader.length() - 1);
+
+
+                headersList.push_back(sHeader);
+                if (bShowHeaders)
+                    cout << "header: \"" << sHeader << "\"\n";
+            }
+
+
+            {
+
+                std::string responseString;
+
+                // Now read the data
+                int32_t nBytesLeftToRead = (int32_t)nBytesToRequest;
+                response_stream.read((char*)pBufferWrite, nBytesToRequest);    // copy as many bytes as we can to the destination buffer
+                nBytesRead = (uint32_t)response_stream.gcount();  // get how many bytes of file data we've read so far
+                nBytesLeftToRead -= nBytesRead;
+                pBufferWrite += nBytesRead;     // advance the pointer to the write buffer
+
+                char buf[1024];
+                boost::system::error_code ec;
+                do {
+                    size_t bytesTransferred = sock.receive(boost::asio::buffer(buf), {}, ec);
+                    if (!ec) responseString.append(buf, buf + bytesTransferred);
+                } while (!ec);
+
+                int32_t nResponseStringLength = (int32_t)responseString.length();
+                if (nBytesLeftToRead == nResponseStringLength)
+                {
+                    memcpy(pBufferWrite, responseString.data(), responseString.length());
+                    nBytesRead = nBytesToRequest;
+                }
+                else
+                {
+                    mnLastError = ec.value();
+                    cout << "Didn't get right number of bytes!\n";
+                    return false;
+                }
+            }
+        }
+        catch (exception& e)
+        {
+            mnLastError = kZZFileError_Exception;
+            cout << "Exception: " << e.what() << "\n";
+
+            return false;
         }
     }
-    catch (exception& e)
-    {
-        mnLastError = kZZFileError_Exception;
-        cout << "Exception: " << e.what() << "\n";
 
-        return false;
+    // if the request can be cached
+    if (bUseCache)
+    {
+        //cout << "committed " << nBytesToRequest << "b to cache offset:" << cacheLine->mnBaseOffset << ". Returning:" << nBytes << "\n";
+        // cache the retrieved results
+        memcpy(pDestination, cacheLine->mData, nBytes);
+        cacheLine->Commit(nBytesToRequest);     // this commits the data to the cache line and frees any waiting requests on it
     }
 
     return true;
@@ -456,7 +504,7 @@ bool cHTTPFile::ParseHeaders(list<std::string>& headersList)
         // add headers to look for here
         const std::string ksContentLengthTag("Content-Length: ");
         const std::string ksContentTypeTag("Content-Type: ");
-        
+
         if (sHeader.substr(0, ksContentLengthTag.length()) == ksContentLengthTag)
         {
             std::string sValue = sHeader.substr(ksContentLengthTag.length());        // get everything after the tag
@@ -493,250 +541,295 @@ bool cHTTPSFile::OpenInternal(string sURL, bool bWrite)
         return false;
     }
 
-	bool bShowHeaders = false;
+    bool bShowHeaders = false;
 
-	// Strip off "http://" if needed
-	if (sURL.substr(0, kHTTPTag.length()) == kHTTPSTag)
-	{
+    // Strip off "http://" if needed
+    if (sURL.substr(0, kHTTPTag.length()) == kHTTPSTag)
+    {
         mnLastError = kZZFileError_URL_Error;
         std::cout << "Attempting to open non-SSL URL with cHTTPS instead of cHTTP.\n";
-		return false;
-	}
+        return false;
+    }
 
-	sURL = sURL.substr(kHTTPSTag.length());		// strip off the "https://"
-	msHost = sURL.substr(0, sURL.find_first_of("/"));
-	msPath = sURL.substr(msHost.length());
+    sURL = sURL.substr(kHTTPSTag.length());		// strip off the "https://"
+    msHost = sURL.substr(0, sURL.find_first_of("/"));
+    msPath = sURL.substr(msHost.length());
 
-	mpSSLContext = new ssl::context(boost::asio::ssl::context::sslv23);
-	auto_ptr<ssl::stream<ip::tcp::socket>> pSock(new ssl::stream<ip::tcp::socket>(mIOService, *mpSSLContext));
+    mpSSLContext = new ssl::context(boost::asio::ssl::context::sslv23);
+    auto_ptr<ssl::stream<ip::tcp::socket>> pSock(new ssl::stream<ip::tcp::socket>(mIOService, *mpSSLContext));
 
-	// Resolve the domain name
-	tcp::resolver resolver(mIOService);
-	std::auto_ptr<tcp::resolver::query> pQuery(new tcp::resolver::query(msHost, "https"));
-	tcp::resolver::iterator ipIterator = resolver.resolve(*pQuery);
-	boost::asio::connect(pSock->lowest_layer(), ipIterator);
+    // Resolve the domain name
+    tcp::resolver resolver(mIOService);
+    std::auto_ptr<tcp::resolver::query> pQuery(new tcp::resolver::query(msHost, "https"));
+    tcp::resolver::iterator ipIterator = resolver.resolve(*pQuery);
+    boost::asio::connect(pSock->lowest_layer(), ipIterator);
 
-	pSock->handshake(ssl::stream_base::handshake_type::client);
-
-
-	// Retrieve headers
-	try
-	{
-		// Form the request
-		boost::asio::streambuf request;
-		std::ostream request_stream(&request);
-
-		request_stream << "GET " << msPath << " HTTP/1.1\r\n";
-		request_stream << "Host: " << msHost << "\r\n";
-		request_stream << "Accept: */*\r\n";
-		request_stream << "Cache-Control: no-cache\r\n";
-		request_stream << "Connection: close\r\n\r\n";
-		request_stream.flush();
-
-		// Fire it off
-		boost::asio::write(*pSock, request);
+    pSock->handshake(ssl::stream_base::handshake_type::client);
 
 
-		// read the first line
-		boost::asio::streambuf response;
-		boost::asio::read_until(*pSock, response, "\r\n");
+    // Retrieve headers
+    try
+    {
+        // Form the request
+        boost::asio::streambuf request;
+        std::ostream request_stream(&request);
 
-		// check response
-		std::istream response_stream(&response);
-		std::string http_version;
+        request_stream << "GET " << msPath << " HTTP/1.1\r\n";
+        request_stream << "Host: " << msHost << "\r\n";
+        request_stream << "Accept: */*\r\n";
+        request_stream << "Cache-Control: no-cache\r\n";
+        request_stream << "Connection: close\r\n\r\n";
+        request_stream.flush();
 
-		response_stream >> http_version;
+        // Fire it off
+        boost::asio::write(*pSock, request);
 
-		uint32_t nHTTPStatusCode = 0;
-		response_stream >> nHTTPStatusCode;
 
-		string sStatusString;
-		getline(response_stream, sStatusString);
+        // read the first line
+        boost::asio::streambuf response;
+        boost::asio::read_until(*pSock, response, "\r\n");
 
-		if (!response_stream || http_version.substr(0, 5) != "HTTP/")
-		{
+        // check response
+        std::istream response_stream(&response);
+        std::string http_version;
+
+        response_stream >> http_version;
+
+        uint32_t nHTTPStatusCode = 0;
+        response_stream >> nHTTPStatusCode;
+
+        string sStatusString;
+        getline(response_stream, sStatusString);
+
+        if (!response_stream || http_version.substr(0, 5) != "HTTP/")
+        {
             mnLastError = nHTTPStatusCode;
             cout << "Invalid response\n";
-			return false;
-		}
-		if (nHTTPStatusCode != 200)
-		{
+            return false;
+        }
+        if (nHTTPStatusCode != 200)
+        {
             mnLastError = nHTTPStatusCode;
             cout << "Response Status Code " << nHTTPStatusCode << " message: \"" << sStatusString << "\"\n";
-			return false;
-		}
+            return false;
+        }
 
-		// get headers
-		boost::asio::read_until(*pSock, response, "\r\n\r\n");
+        // get headers
+        boost::asio::read_until(*pSock, response, "\r\n\r\n");
 
-		list<std::string> headersList;
+        list<std::string> headersList;
 
-		string sHeader;
-		while (std::getline(response_stream, sHeader) && sHeader != "\r")
-		{
-			// strip off any trailing '\r'
-			if (sHeader.substr(sHeader.length() - 1) == "\r")
-				sHeader = sHeader.substr(0, sHeader.length() - 1);
-			// strip off any trailing '\n'
-			if (sHeader.substr(sHeader.length() - 1) == "\n")
-				sHeader = sHeader.substr(0, sHeader.length() - 1);
+        string sHeader;
+        while (std::getline(response_stream, sHeader) && sHeader != "\r")
+        {
+            // strip off any trailing '\r'
+            if (sHeader.substr(sHeader.length() - 1) == "\r")
+                sHeader = sHeader.substr(0, sHeader.length() - 1);
+            // strip off any trailing '\n'
+            if (sHeader.substr(sHeader.length() - 1) == "\n")
+                sHeader = sHeader.substr(0, sHeader.length() - 1);
 
-			headersList.push_back(sHeader);
-			if (bShowHeaders)
-				cout << "header: \"" << sHeader << "\"\n";
-		}
+            headersList.push_back(sHeader);
+            if (bShowHeaders)
+                cout << "header: \"" << sHeader << "\"\n";
+        }
 
-		ParseHeaders(headersList);      // extract whatever we need
+        ParseHeaders(headersList);      // extract whatever we need
 
-	}
-	catch (exception& e)
-	{
+    }
+    catch (exception& e)
+    {
         mnLastError = kZZFileError_Exception;
-		cout << "Exception: " << e.what() << "\n";
-		return false;
-	}
+        cout << "Exception: " << e.what() << "\n";
+        return false;
+    }
 
-	cout << "Opened HTTPS host:\"" << msHost << "\"\n path:\"" << msPath << "\"\n filesize:" << mnFileSize << "\n";
+    cout << "Opened HTTPS host:\"" << msHost << "\"\n path:\"" << msPath << "\"\n filesize:" << mnFileSize << "\n";
 
-	return true;
+    return true;
 }
 
 bool cHTTPSFile::Read(int64_t nOffset, uint32_t nBytes, uint8_t* pDestination, uint32_t& nBytesRead)
 {
     mnLastError = kZZfileError_None;
 
-	uint8_t* pBufferWrite = pDestination;
-	bool bShowHeaders = false;
-	try
-	{
-		if (!mpSSLContext)
-		{
-            mnLastError = kZZFileError_No_SSL_Context;
-            cout << "cHTTPSFile::Read No SSLContext!\n";
-			return false;
-		}
-
-		auto_ptr<ssl::stream<ip::tcp::socket>> pSock(new ssl::stream<ip::tcp::socket>(mIOService, *mpSSLContext));
-
-		// Resolve the domain name
-		tcp::resolver resolver(mIOService);
-		std::auto_ptr<tcp::resolver::query> pQuery(new tcp::resolver::query(msHost, "https"));
-		tcp::resolver::iterator ipIterator = resolver.resolve(*pQuery);
-		boost::asio::connect(pSock->lowest_layer(), ipIterator);
-
-		pSock->handshake(ssl::stream_base::handshake_type::client);
+    bool bUseCache = false;
+    int64_t nOffsetToRequest = nOffset;
+    uint32_t nBytesToRequest = nBytes;
+    uint8_t* pBufferWrite = pDestination;
+    shared_ptr<HTTPCacheLine> cacheLine;
 
 
-		// Form the request
-		boost::asio::streambuf request;
-		std::ostream request_stream(&request);
+    if (nBytesToRequest < kHTTPCacheLineSize && (uint64_t)nOffset + (uint64_t)kHTTPCacheLineSize < mnFileSize)
+        bUseCache = true;
 
-		request_stream << "GET " << msPath << " HTTP/1.1\r\n";
-		request_stream << "Host: " << msHost << "\r\n";
-		request_stream << "Accept: */*\r\n";
-		request_stream << "Cache-Control: no-cache\r\n";
-		request_stream << "Range: bytes=" << nOffset << "-" << nOffset + nBytes - 1 << "\r\n";
-		request_stream << "Connection: close\r\n\r\n";
-		request_stream.flush();
+    if (bUseCache)
+    {
+        bool bNew = mCache.CheckOrReserve(nOffset, nBytes, cacheLine);           // If a cache line that would contain this data hasn't already been requested this will reserve one and return it
+        if (!bNew)
+        {
+            cacheLine->Get(nOffset, nBytes, pDestination);      // this may block if the line is pending
+            nBytesRead = nBytes;
 
-		// Fire it off
-		boost::asio::write(*pSock, request);
+            //cout << "HTTP Data read from cache...Requested:" << nBytes << "b at offset:" << nOffset << "\n";
+            return true;
+        }
 
+        int64_t nUnfullfilledBytes = cacheLine->mUnfullfilledInterval.second - cacheLine->mUnfullfilledInterval.first;
+        assert(!cacheLine->mbCommitted);
 
+        nOffsetToRequest = cacheLine->mUnfullfilledInterval.first;
+        nBytesToRequest = (uint32_t)nUnfullfilledBytes;
+        int64_t nOffsetIntoCacheLine = nOffsetToRequest - cacheLine->mnBaseOffset;
 
+        pBufferWrite = &cacheLine->mData[nOffsetIntoCacheLine];
+    }
 
-		// read the first line
-		boost::asio::streambuf response;
-		boost::asio::read_until(*pSock, response, "\r\n");
+    if (nBytesToRequest > 0)
+    {
+        bool bShowHeaders = false;
 
-		// check response
-		std::istream response_stream(&response);
-		std::string http_version;
+        try
+        {
+            if (!mpSSLContext)
+            {
+                mnLastError = kZZFileError_No_SSL_Context;
+                cout << "cHTTPSFile::Read No SSLContext!\n";
+                return false;
+            }
 
-		response_stream >> http_version;
+            auto_ptr<ssl::stream<ip::tcp::socket>> pSock(new ssl::stream<ip::tcp::socket>(mIOService, *mpSSLContext));
 
-		uint32_t nHTTPStatusCode = 0;
-		response_stream >> nHTTPStatusCode;
+            // Resolve the domain name
+            tcp::resolver resolver(mIOService);
+            std::auto_ptr<tcp::resolver::query> pQuery(new tcp::resolver::query(msHost, "https"));
+            tcp::resolver::iterator ipIterator = resolver.resolve(*pQuery);
+            boost::asio::connect(pSock->lowest_layer(), ipIterator);
 
-		string sStatusString;
-		getline(response_stream, sStatusString);
-
-		if (!response_stream || http_version.substr(0, 5) != "HTTP/")
-		{
-            mnLastError = nHTTPStatusCode;
-			cout << "Invalid response\n";
-			return false;
-		}
-		if (!(nHTTPStatusCode == 200 || nHTTPStatusCode == 206))
-		{
-            mnLastError = nHTTPStatusCode;
-            cout << "Response Status Code " << nHTTPStatusCode << " message: \"" << sStatusString << "\"\n";
-			return false;
-		}
-
-		// get headers
-		boost::asio::read_until(*pSock, response, "\r\n\r\n");
-
-		list<std::string> headersList;
-
-		string sHeader;
-		while (std::getline(response_stream, sHeader) && sHeader != "\r")
-		{
-			// strip off any trailing '\r'
-			if (sHeader.substr(sHeader.length() - 1) == "\r")
-				sHeader = sHeader.substr(0, sHeader.length() - 1);
-			// strip off any trailing '\n'
-			if (sHeader.substr(sHeader.length() - 1) == "\n")
-				sHeader = sHeader.substr(0, sHeader.length() - 1);
+            pSock->handshake(ssl::stream_base::handshake_type::client);
 
 
-			headersList.push_back(sHeader);
-			if (bShowHeaders)
-				cout << "header: \"" << sHeader << "\"\n";
-		}
+            // Form the request
+            boost::asio::streambuf request;
+            std::ostream request_stream(&request);
+
+            request_stream << "GET " << msPath << " HTTP/1.1\r\n";
+            request_stream << "Host: " << msHost << "\r\n";
+            request_stream << "Accept: */*\r\n";
+            request_stream << "Cache-Control: no-cache\r\n";
+            request_stream << "Range: bytes=" << nOffsetToRequest << "-" << nOffsetToRequest + nBytesToRequest - 1 << "\r\n";
+            request_stream << "Connection: close\r\n\r\n";
+            request_stream.flush();
+
+            // Fire it off
+            boost::asio::write(*pSock, request);
+
+            gnTotalHTTPBytesRequested += nBytesToRequest;
+            gnTotalRequestsIssued++;
 
 
-		{
+            // read the first line
+            boost::asio::streambuf response;
+            boost::asio::read_until(*pSock, response, "\r\n");
 
-			std::string responseString;
+            // check response
+            std::istream response_stream(&response);
+            std::string http_version;
 
-			// Now read the data
-			int32_t nBytesLeftToRead = (int32_t)nBytes;
-			response_stream.read((char*)pBufferWrite, nBytes);    // copy as many bytes as we can to the destination buffer
-			nBytesRead = (uint32_t)response_stream.gcount();  // get how many bytes of file data we've read so far
-			nBytesLeftToRead -= nBytesRead;
-			pBufferWrite += nBytesRead;     // advance the pointer to the write buffer
+            response_stream >> http_version;
 
-			char buf[1024];
-			boost::system::error_code ec;
-			do {
-				size_t bytesTransferred = pSock->read_some(boost::asio::buffer(buf), ec);
-				if (!ec) responseString.append(buf, buf + bytesTransferred);
-			} while (!ec);
+            uint32_t nHTTPStatusCode = 0;
+            response_stream >> nHTTPStatusCode;
 
-			int32_t nResponseStringLength = (int32_t) responseString.length();
-			if (nBytesLeftToRead == nResponseStringLength)
-			{
-				memcpy(pBufferWrite, responseString.data(), responseString.length());
-				nBytesRead = nBytes;
-			}
-			else
-			{
-                mnLastError = ec.value();
-                cout << "Didn't get right number of bytes!\n";
-				return false;
-			}
-		}
-	}
-	catch (exception& e)
-	{
-        mnLastError = kZZFileError_Exception;
-        cout << "Exception: " << e.what() << "\n";
+            string sStatusString;
+            getline(response_stream, sStatusString);
 
-		return false;
-	}
+            if (!response_stream || http_version.substr(0, 5) != "HTTP/")
+            {
+                mnLastError = nHTTPStatusCode;
+                cout << "Invalid response\n";
+                return false;
+            }
+            if (!(nHTTPStatusCode == 200 || nHTTPStatusCode == 206))
+            {
+                mnLastError = nHTTPStatusCode;
+                cout << "Response Status Code " << nHTTPStatusCode << " message: \"" << sStatusString << "\"\n";
+                return false;
+            }
 
-	return true;
+            // get headers
+            boost::asio::read_until(*pSock, response, "\r\n\r\n");
+
+            list<std::string> headersList;
+
+            string sHeader;
+            while (std::getline(response_stream, sHeader) && sHeader != "\r")
+            {
+                // strip off any trailing '\r'
+                if (sHeader.substr(sHeader.length() - 1) == "\r")
+                    sHeader = sHeader.substr(0, sHeader.length() - 1);
+                // strip off any trailing '\n'
+                if (sHeader.substr(sHeader.length() - 1) == "\n")
+                    sHeader = sHeader.substr(0, sHeader.length() - 1);
+
+
+                headersList.push_back(sHeader);
+                if (bShowHeaders)
+                    cout << "header: \"" << sHeader << "\"\n";
+            }
+
+
+            {
+
+                std::string responseString;
+
+                // Now read the data
+                int32_t nBytesLeftToRead = (int32_t)nBytesToRequest;
+                response_stream.read((char*)pBufferWrite, nBytesToRequest);    // copy as many bytes as we can to the destination buffer
+                nBytesRead = (uint32_t)response_stream.gcount();  // get how many bytes of file data we've read so far
+                nBytesLeftToRead -= nBytesRead;
+                pBufferWrite += nBytesRead;     // advance the pointer to the write buffer
+
+                char buf[1024];
+                boost::system::error_code ec;
+                do {
+                    size_t bytesTransferred = pSock->read_some(boost::asio::buffer(buf), ec);
+                    if (!ec) responseString.append(buf, buf + bytesTransferred);
+                } while (!ec);
+
+                int32_t nResponseStringLength = (int32_t)responseString.length();
+                if (nBytesLeftToRead == nResponseStringLength)
+                {
+                    memcpy(pBufferWrite, responseString.data(), responseString.length());
+                    nBytesRead = nBytesToRequest;
+                }
+                else
+                {
+                    mnLastError = ec.value();
+                    cout << "Didn't get right number of bytes!\n";
+                    return false;
+                }
+            }
+        }
+        catch (exception& e)
+        {
+            mnLastError = kZZFileError_Exception;
+            cout << "Exception: " << e.what() << "\n";
+
+            return false;
+        }
+    }
+
+    // if the request can be cached
+    if (bUseCache)
+    {
+        //cout << "committed " << nBytesToRequest << "b to cache offset:" << cacheLine->mnBaseOffset << ". Returning:" << nBytes << "\n";
+        // cache the retrieved results
+        memcpy(pDestination, cacheLine->mData, nBytes);
+        cacheLine->Commit(nBytesToRequest);     // this commits the data to the cache line and frees any waiting requests on it
+    }
+
+    return true;
 }
 
 bool cHTTPSFile::Write(int64_t, uint32_t, uint8_t*, uint32_t&)
@@ -748,7 +841,7 @@ bool cHTTPSFile::Write(int64_t, uint32_t, uint8_t*, uint32_t&)
 
 bool cHTTPSFile::Close()
 {
-	delete mpSSLContext;
-	mpSSLContext = NULL;
-	return true;
+    delete mpSSLContext;
+    mpSSLContext = NULL;
+    return true;
 }

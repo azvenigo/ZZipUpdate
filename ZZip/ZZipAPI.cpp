@@ -314,6 +314,7 @@ bool ZZipAPI::DecompressToFile(const wstring& sFilename, const wstring& sOutputF
         return false;
     }
 
+
     uint64_t nCompressedBytesProcessed = 0;
     while (nCompressedBytesProcessed < cdFileHeader.mCompressedSize)
     {
@@ -324,8 +325,8 @@ bool ZZipAPI::DecompressToFile(const wstring& sFilename, const wstring& sOutputF
         if (nCompressedBytesProcessed + nBytesToProcess > cdFileHeader.mCompressedSize)
             nBytesToProcess = cdFileHeader.mCompressedSize - nCompressedBytesProcessed;
 
-
         uint32_t nBytesRead = 0;
+
         if (!mpZZFile->Read(nReadOffset, (uint32_t)nBytesToProcess, pCompStream, nBytesRead))
         {
             delete[] pCompStream;
@@ -335,7 +336,6 @@ bool ZZipAPI::DecompressToFile(const wstring& sFilename, const wstring& sOutputF
 
         decompressor.InitStream(pCompStream, (uint32_t)nBytesToProcess);
         int32_t nStatus = Z_OK;
-        bool bDone = false;
         int32_t nOutIndex = 0;
         while (decompressor.HasMoreOutput())
         {
@@ -357,9 +357,9 @@ bool ZZipAPI::DecompressToFile(const wstring& sFilename, const wstring& sOutputF
                     pProgress->AddBytesProcessed(nDecompressedBytes);
             }
 
-            if (nStatus != Z_OK)
+            if (nStatus < 0)
             {
-                bDone = true;
+                break;
             }
         }
 
@@ -476,7 +476,6 @@ bool ZZipAPI::AddToZipFile(const wstring& sFilename, const wstring& sBaseFolder,
 
             compressor.InitStream(pStream, (uint32_t)nBytesToProcess);
             int32_t nStatus = Z_OK;
-            bool bDone = false;
             int32_t nOutIndex = 0;
             while (compressor.HasMoreOutput())
             {
@@ -501,7 +500,7 @@ bool ZZipAPI::AddToZipFile(const wstring& sFilename, const wstring& sBaseFolder,
 
                 if (nStatus != Z_OK)
                 {
-                    bDone = true;
+                    break;
                 }
             }
 
@@ -592,7 +591,6 @@ bool ZZipAPI::AddToZipFileFromBuffer(uint8_t* pInputBuffer, uint32_t nInputBuffe
     compressor.Init(mnCompressionLevel);
     compressor.InitStream(pInputBuffer, (uint32_t)nInputBufferSize);
     int32_t nStatus = Z_OK;
-    bool bDone = false;
     int32_t nOutIndex = 0;
     while (compressor.HasMoreOutput())
     {
@@ -614,7 +612,7 @@ bool ZZipAPI::AddToZipFileFromBuffer(uint8_t* pInputBuffer, uint32_t nInputBuffe
 
         if (nStatus != Z_OK)
         {
-            bDone = true;
+            break;
         }
     }
 
@@ -774,9 +772,8 @@ bool ZZipAPI::DecompressToBuffer(const wstring& sFilename, uint8_t* pOutputBuffe
 
     decompressor.InitStream(pCompStream, (int32_t)cdFileHeader.mCompressedSize);
     int32_t nStatus = decompressor.Decompress();
-    bool bDone = false;
     int32_t nOutIndex = 0;
-    while (!bDone)
+    while (decompressor.HasMoreOutput())
     {
         if (nStatus == Z_OK || nStatus == Z_STREAM_END)
         {
@@ -788,9 +785,9 @@ bool ZZipAPI::DecompressToBuffer(const wstring& sFilename, uint8_t* pOutputBuffe
                 pProgress->AddBytesProcessed(nDecompressedBytes);
         }
 
-        if (nStatus != Z_OK)
+        if (nStatus < 0)
         {
-            bDone = true;
+            break;
         }
     }
 
