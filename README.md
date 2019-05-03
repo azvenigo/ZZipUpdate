@@ -4,6 +4,9 @@ A cross platform utility for creating, exploring, diffing, extracting and syncin
 The Windows binary is included.
 
 
+# Latest Updates
+* As of May 3, 2019 I added an HTTPCache which greatly improves performance in conditions where there are many small reads to a server. 
+
 
 # Requirements
 
