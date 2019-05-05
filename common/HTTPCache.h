@@ -35,9 +35,6 @@ public:
     chrono::time_point<chrono::system_clock>    mRequestTime;
     chrono::time_point<chrono::system_clock>    mFullfilledTime;
     tIntPair                                    mUnfullfilledInterval;  // lower and upper bounds of data that needs to be fullfilled
-
-    // metrics
-    int64_t                                     mnBytesRetrievedFromLine;
 };
 
 typedef map< uint64_t, shared_ptr<HTTPCacheLine> > tOffsetToHTTPCacheLineMap;

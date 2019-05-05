@@ -33,13 +33,10 @@ HTTPCacheLine::HTTPCacheLine()
     mnBufferData = 0;
     memset(&mData[0], 0, kHTTPCacheLineSize);
     mUnfullfilledInterval = tIntPair(0, 0);
-
-    mnBytesRetrievedFromLine = 0;
 }
 
 HTTPCacheLine::~HTTPCacheLine()
 {
-    //cout << "HTTPCacheLine at offset:" << mnBaseOffset << " unread bytes:" << kHTTPCacheLineSize - mnBytesRetrievedFromLine << "\n";
 }
 
 
@@ -50,7 +47,11 @@ HTTPCache::HTTPCache()
 
 HTTPCache::~HTTPCache()
 {
-    //cout << "HTTPCache Report\nTotalBytesReserved:" << gnTotalBytesReserved << "Bytes Saved:" << gnTotalBytesSaved << "\n";
+    //cout << "-HTTPCache Report-\n";
+    //cout << "Total Bytes Reserved:            " << gnTotalBytesReserved << "\n";
+    //cout << "Total Cache Lines Reserved:      " << gnTotalCacheLinesReserved << "\n";
+    //cout << "Bytes Copied Across Cache Lines: " << gnTotalBytesCopiedAcrossCacheLines << "\n";
+    //cout << "Bytes Saved :                    " << gnTotalBytesSaved << "\n";
 
 }
 
@@ -202,7 +203,6 @@ bool HTTPCacheLine::Get(int64_t nOffset, int32_t nBytes, uint8_t* pDestination)
         //cout << "found line item offset:" << mnBaseOffset << " copying from index:" << nIndexIntoCacheLine << " bytes:" << nBytes << "\n";
         memcpy(pDestination, mData + nIndexIntoCacheLine, nBytes);
         gnTotalBytesSaved += nBytes;
-        mnBytesRetrievedFromLine += nBytes;
         return true;
     }
 
