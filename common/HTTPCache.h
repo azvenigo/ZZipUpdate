@@ -15,8 +15,8 @@
 
 using namespace std;
 
-const uint32_t kHTTPCacheLineSize = 32 * 1024;
-const uint32_t kMaxCacheLines = 64;
+const uint32_t kHTTPCacheLineSize = 1 * 1024 * 1024;
+const uint32_t kMaxCacheLines = 16;
 typedef std::pair<int64_t, int64_t> tIntPair;
 
 class HTTPCacheLine
