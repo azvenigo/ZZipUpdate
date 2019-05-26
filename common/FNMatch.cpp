@@ -14,6 +14,9 @@ bool FNMatch(const string& pattern, const string& search)
     if ((pattern.empty() || pattern == "*"))  // if we're not matching everything
         return true;
 
+    if (pattern == search)  // exact match
+        return true;
+
     string sPatternToUse(pattern);
     boost::ireplace_all(sPatternToUse, "\\", "/");  // all backslashes to forward
     boost::ireplace_all(sPatternToUse, "/", "./");  //  regex escape slashes
@@ -26,6 +29,9 @@ bool FNMatch(const string& pattern, const string& search)
 bool FNMatch(const wstring& pattern, const wstring& search)
 {
     if ((pattern.empty() || pattern == L"*"))  // if we're not matching everything
+        return true;
+
+    if (pattern == search)  // exact match
         return true;
 
     wstring sPatternToUse(pattern);

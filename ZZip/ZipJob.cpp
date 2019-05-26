@@ -528,11 +528,6 @@ void ZipJob::RunDecompressionJob(void* pContext)
             if (cdHeader.mFileName.length() == 0)
                 return DecompressTaskResult(DecompressTaskResult::kAlreadyUpToDate, 0, 0, 0, 0, "", "empty filename.");
 
-
-            // if there's a pattern check that it matches
-            if (!FNMatch(pZipJob->msPattern, string_to_wstring(cdHeader.mFileName)))
-                return DecompressTaskResult(DecompressTaskResult::kSkipping, 0, 0, 0, 0, cdHeader.mFileName, "doesn't match pattern.");;
-
             boost::filesystem::path fullPath(pZipJob->msBaseFolder);
             fullPath.append(cdHeader.mFileName);
 
