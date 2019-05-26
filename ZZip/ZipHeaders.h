@@ -297,7 +297,7 @@ public:
     bool                    Write(cZZFile& file);   // assumes must be written at end of file
     uint64_t                Size();     // size of CD in bytes
 
-    void                    DumpCD(std::ostream& out, eToStringFormat format = kHTML);
+    void                    DumpCD(std::ostream& out, bool bVerbose = false, eToStringFormat format = kHTML);
 
     tCDFileHeaderList       mCDFileHeaderList;
     cEndOfCDRecord          mEndOfCDRecord;

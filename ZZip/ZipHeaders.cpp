@@ -991,23 +991,29 @@ uint64_t cZipCD::Size()
     return nSize;
 }
 
-void cZipCD::DumpCD(std::ostream& outFile, eToStringFormat format)
+void cZipCD::DumpCD(std::ostream& outFile, bool bVerbose, eToStringFormat format)
 {
     int32_t nIndex = 0;
-    outFile << NextLine(format);
-    outFile << "Central Directory";
-    outFile << NextLine(format);
+    if (bVerbose)
+    {
+        outFile << NextLine(format);
+        outFile << "Central Directory";
+        outFile << NextLine(format);
+    }
 
-    // CD Stats
-    if (format == kHTML)
-        outFile << "<table border='1'>\n";
+    if (bVerbose)
+    {
+        // CD Stats
+        if (format == kHTML)
+            outFile << "<table border='1'>\n";
 
-    outFile << FormatStrings(format, "Total Files", "Total Folders", "Total Compressed Size", "Total Uncompressed Size", "Compression Ratio");
-    outFile << FormatStrings(format, to_string(GetNumTotalFiles()), to_string(GetNumTotalFolders()), to_string(GetTotalCompressedBytes()), to_string(GetTotalUncompressedBytes()), to_string((double)GetTotalCompressedBytes() / (double)GetTotalUncompressedBytes()));
+        outFile << FormatStrings(format, "Total Files", "Total Folders", "Total Compressed Size", "Total Uncompressed Size", "Compression Ratio");
+        outFile << FormatStrings(format, to_string(GetNumTotalFiles()), to_string(GetNumTotalFolders()), to_string(GetTotalCompressedBytes()), to_string(GetTotalUncompressedBytes()), to_string((double)GetTotalCompressedBytes() / (double)GetTotalUncompressedBytes()));
 
+        if (format == kHTML)
+            outFile << "</table>\n";
+    }
 
-    if (format == kHTML)
-        outFile << "</table>\n";
 
     outFile << NextLine(format);
 
@@ -1015,14 +1021,20 @@ void cZipCD::DumpCD(std::ostream& outFile, eToStringFormat format)
     // CD Entries
     if (format == kHTML)
         outFile << "<table border='1'>\n";
-
-    outFile << cCDFileHeader::FieldNames(format).c_str();
-    outFile << NextLine(format);
+    if (bVerbose)
+    {
+        outFile << cCDFileHeader::FieldNames(format).c_str();
+        outFile << NextLine(format);
+    }
 
     for (tCDFileHeaderList::iterator it = mCDFileHeaderList.begin(); it != mCDFileHeaderList.end(); it++)
     {
         cCDFileHeader& cdFileHeader = *it;
-        outFile << cdFileHeader.ToString(format).c_str();
+        if (bVerbose)
+            outFile << cdFileHeader.ToString(format).c_str();
+        else
+            outFile << cdFileHeader.mFileName.c_str() << NextLine(format);
+
         nIndex++;
     }
 

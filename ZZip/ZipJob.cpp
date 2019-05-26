@@ -45,11 +45,14 @@ ZipJob::~ZipJob()
 
 void ZipJob::SetBaseFolder(const wstring& sBaseFolder)
 {
-    msBaseFolder = sBaseFolder;
-    std::replace(msBaseFolder.begin(), msBaseFolder.end(), '\\', '/');    // Only forward slashes
+    if (!sBaseFolder.empty())
+    {
+        msBaseFolder = sBaseFolder;
+        std::replace(msBaseFolder.begin(), msBaseFolder.end(), '\\', '/');    // Only forward slashes
 
-    if (msBaseFolder[msBaseFolder.length() - 1] != '/')
-        msBaseFolder.append(L"/");
+        if (msBaseFolder[msBaseFolder.length() - 1] != '/')
+            msBaseFolder.append(L"/");
+    }
 }
 
 
@@ -680,7 +683,7 @@ void ZipJob::RunListJob(void* pContext)
         return;
     }
 
-    zipCD.DumpCD(cout, pZipJob->mOutputFormat);
+    zipCD.DumpCD(cout, pZipJob->mbVerbose, pZipJob->mOutputFormat);
 
     pZipJob->mJobStatus.mStatus = JobStatus::kFinished;
 }
@@ -709,7 +712,8 @@ bool ZipJob::Join()
         delete pThread;
     }
 
-    cout << mJobStatus << "\n";
+    if (mbVerbose)
+        cout << mJobStatus << "\n";
 
     mWorkers.clear();
 
