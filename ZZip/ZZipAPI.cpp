@@ -193,7 +193,7 @@ void ZZipAPI::DumpReport(const wstring& sOutputFilename)
         outFile << "</table>";
     }
 
-    mZipCD.DumpCD(outFile);
+    mZipCD.DumpCD(outFile, L"*", true, eToStringFormat::kHTML);
 
     outFile << "</html>";
 

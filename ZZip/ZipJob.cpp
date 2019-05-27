@@ -678,7 +678,7 @@ void ZipJob::RunListJob(void* pContext)
         return;
     }
 
-    zipCD.DumpCD(cout, pZipJob->mbVerbose, pZipJob->mOutputFormat);
+    zipCD.DumpCD(cout, pZipJob->msPattern, pZipJob->mbVerbose, pZipJob->mOutputFormat);
 
     pZipJob->mJobStatus.mStatus = JobStatus::kFinished;
 }

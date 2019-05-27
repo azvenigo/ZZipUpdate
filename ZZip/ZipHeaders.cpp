@@ -14,6 +14,7 @@
 #include <filesystem>
 #include <iostream>
 #include <iomanip>
+#include "common/FNMatch.h"
 
 using namespace std;
 
@@ -767,139 +768,6 @@ bool cZipCD::Init(cZZFile& zzFile)
     return true;
 }
 
-/*bool cZipCD::Init(cZZFile& file)
-{
-    // Find the end of CD Record
-    const int32_t kMaxSizeOfCDRec = 1024;
-
-//    file.seekg(0, ios::end);     // seek to end
-//    std::streampos nZipFileSize = file.tellg();
-
-    int32_t nReadSizeofCDRec = kMaxSizeOfCDRec;
-    if (nReadSizeofCDRec > file.GetFileSize())
-        nReadSizeofCDRec = (int32_t)file.GetFileSize();
-
-    int64_t nSeekPosition = file.GetFileSize() - std::streampos(nReadSizeofCDRec);
-
-    uint8_t* pBuf = new uint8_t[nReadSizeofCDRec];     // Should be more than enough space for this record
-    //file.read((char*)pBuf, nReadSizeofCDRec); // fill the buffer with the end of the zip file
-    uint32_t nBytesRead = 0;
-    if (!file.Read(nSeekPosition, nReadSizeofCDRec, pBuf, nBytesRead))
-    {
-        delete[] pBuf;
-        cout << "Failed to read " << nReadSizeofCDRec << " bytes for End of CD Record.\n";
-        return false;
-    }
-
-    bool bFoundEndOfCDRecord = false;
-    for (int32_t nSeek = nReadSizeofCDRec - sizeof(kZipEndofCDTag); nSeek >= 0; nSeek--)
-    {
-        uint32_t* pTag = (uint32_t*)(pBuf + nSeek);
-        if (*pTag == kZipEndofCDTag)
-        {
-            // Found a 32 bit tag
-            uint32_t nNumBytesProcessed = 0;
-            mEndOfCDRecord.ParseRaw(pBuf + nSeek, nNumBytesProcessed);
-            bFoundEndOfCDRecord = true;
-            break;
-        }
-    }
-
-    if (!bFoundEndOfCDRecord)
-    {
-        delete[] pBuf;
-        cout << "Couldn't find End of CD Tag\n";
-        return false;
-    }
-
-
-    // Now look for ZiP64 End of CD Directory Locator
-    bool bFoundZip64EndOfCDLocator = false;
-    for (int32_t nSeek = nReadSizeofCDRec - sizeof(kZip64EndofCDLocatorTag); nSeek >= 0; nSeek--)
-    {
-        uint32_t* pTag = (uint32_t*)(pBuf + nSeek);
-        if (*pTag == kZip64EndofCDLocatorTag)
-        {
-            // Found 
-            //            cout << "Found kZip64EndofCDLocatorTag.\n";
-            uint32_t nNumBytesProcessed = 0;
-            mZip64EndOfCDLocator.ParseRaw(pBuf + nSeek, nNumBytesProcessed);
-            bFoundZip64EndOfCDLocator = true;
-            break;
-        }
-    }
-
-    // Found a Zip64 locator, now read zip64 end of CD record
-    if (bFoundZip64EndOfCDLocator)
-    {
-        bool bFoundZip64EndOfCDRecord = false;
-        for (int32_t nSeek = nReadSizeofCDRec - sizeof(kZip64EndofCDTag); nSeek >= 0; nSeek--)
-        {
-            uint32_t* pTag = (uint32_t*)(pBuf + nSeek);
-            if (*pTag == kZip64EndofCDTag)
-            {
-                //                cout << "Found kZip64EndofCDTag.\n";
-                uint32_t nNumBytesProcessed = 0;
-                mZip64EndOfCDRecord.ParseRaw(pBuf + nSeek, nNumBytesProcessed);
-                bFoundZip64EndOfCDRecord = true;
-
-                mbIsZip64 = true;       // Treat archive as zip64
-                break;
-            }
-        }
-    }
-
-    delete[] pBuf;
-
-    uint64_t nOffsetOfCD = mEndOfCDRecord.mCDStartOffset;
-    uint64_t nCDBytes = mEndOfCDRecord.mNumBytesOfCD;       // central directory
-    uint64_t nCDRecords = mEndOfCDRecord.mNumTotalRecords;
-    if (mbIsZip64)
-    {
-        nOffsetOfCD = mZip64EndOfCDRecord.mCDStartOffset;
-        nCDBytes = (uint32_t)mZip64EndOfCDRecord.mNumBytesOfCD;
-        nCDRecords = mZip64EndOfCDRecord.mNumTotalRecords;
-    }
-
-
-    const uint32_t kMaxReasonableCDBytes = 64 * 1024 * 1024;    // 64 megs ought to be far far beyond anything we'd ever encounter
-    if ((uint32_t)nCDBytes > kMaxReasonableCDBytes)
-    {
-        cout << "CD Size read as " << nCDBytes << " which exceeds the maximum accepted of " << kMaxReasonableCDBytes << ".  If this assumpiton was unreasonable then the author of this code humbly apologizes.\n";
-        return false;
-    }
-
-    ///////////////////////
-
-
-    pBuf = new uint8_t[(uint32_t)nCDBytes];
-    if (file.Read(nOffsetOfCD, nCDBytes, pBuf, nBytesRead))
-    {
-        delete[] pBuf;
-        cout << "Failed to read " << nCDBytes << " bytes for the CD.\n";
-        return false;
-    }
-
-
-
-    int32_t nBufOffset = 0;
-    for (int32_t i = 0; i < nCDRecords; i++)
-    {
-        cCDFileHeader fileHeader;
-        uint32_t nNumBytesProcessed = 0;
-
-        fileHeader.ParseRaw(pBuf + nBufOffset, nNumBytesProcessed);
-        //        cout << "read header for file \"" << fileHeader.mFileName << "\" at offset " << (uint32_t) (nBufOffset + nOffsetOfCD) << fileHeader.ToString() << "\n";
-        nBufOffset += nNumBytesProcessed;
-
-        mCDFileHeaderList.push_back(fileHeader);
-    }
-
-    delete[] pBuf;
-
-    mbInitted = true;
-    return true;
-}*/
 
 uint64_t cZipCD::GetNumTotalFiles()
 {
@@ -991,57 +859,67 @@ uint64_t cZipCD::Size()
     return nSize;
 }
 
-void cZipCD::DumpCD(std::ostream& outFile, bool bVerbose, eToStringFormat format)
+void cZipCD::DumpCD(std::ostream& out, const wstring& sPattern, bool bVerbose, eToStringFormat format)
 {
     int32_t nIndex = 0;
     if (bVerbose)
     {
-        outFile << NextLine(format);
-        outFile << "Central Directory";
-        outFile << NextLine(format);
+        out << NextLine(format);
+        out << "Package Central Directory";
+        out << NextLine(format);
     }
 
     if (bVerbose)
     {
         // CD Stats
         if (format == kHTML)
-            outFile << "<table border='1'>\n";
+            out << "<table border='1'>\n";
 
-        outFile << FormatStrings(format, "Total Files", "Total Folders", "Total Compressed Size", "Total Uncompressed Size", "Compression Ratio");
-        outFile << FormatStrings(format, to_string(GetNumTotalFiles()), to_string(GetNumTotalFolders()), to_string(GetTotalCompressedBytes()), to_string(GetTotalUncompressedBytes()), to_string((double)GetTotalCompressedBytes() / (double)GetTotalUncompressedBytes()));
+        out << FormatStrings(format, "Total Files", "Total Folders", "Total Compressed Size", "Total Uncompressed Size", "Compression Ratio");
+        out << FormatStrings(format, to_string(GetNumTotalFiles()), to_string(GetNumTotalFolders()), to_string(GetTotalCompressedBytes()), to_string(GetTotalUncompressedBytes()), to_string((double)GetTotalCompressedBytes() / (double)GetTotalUncompressedBytes()));
 
         if (format == kHTML)
-            outFile << "</table>\n";
+            out << "</table>\n";
     }
 
 
-    outFile << NextLine(format);
+    out << NextLine(format);
 
 
     // CD Entries
-    if (format == kHTML)
-        outFile << "<table border='1'>\n";
     if (bVerbose)
     {
-        outFile << cCDFileHeader::FieldNames(format).c_str();
-        outFile << NextLine(format);
+        out << NextLine(format);
+        out << "List of Files";
+    }
+
+    if (format == kHTML)
+        out << "<table border='1'>\n";
+    if (bVerbose)
+    {
+        out << cCDFileHeader::FieldNames(format).c_str();
+        out << NextLine(format);
     }
 
     for (tCDFileHeaderList::iterator it = mCDFileHeaderList.begin(); it != mCDFileHeaderList.end(); it++)
     {
         cCDFileHeader& cdFileHeader = *it;
-        if (bVerbose)
-            outFile << cdFileHeader.ToString(format).c_str();
-        else
-            outFile << cdFileHeader.mFileName.c_str() << NextLine(format);
+
+        if (FNMatch(sPattern, string_to_wstring(cdFileHeader.mFileName).c_str()))
+        {
+            if (bVerbose)
+                out << cdFileHeader.ToString(format).c_str();
+            else
+                out << cdFileHeader.mFileName.c_str() << NextLine(format);
+        }
 
         nIndex++;
     }
 
     if (format == kHTML)
-        outFile << "</table>\n";
+        out << "</table>\n";
 
-    outFile << NextLine(format);
+    out << NextLine(format);
 }
 
 bool cZipCD::GetFileHeader(const string& sFilename, cCDFileHeader& fileHeader)
