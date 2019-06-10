@@ -13,6 +13,7 @@
 #pragma once
 
 #include <string>
+#include <cctype>
 #include <boost/lexical_cast.hpp>
 
 using namespace std;
@@ -25,9 +26,14 @@ namespace StringHelpers
     string	int_to_hex_string(uint32_t nVal);
     string	int_to_hex_string(uint64_t nVal);
     string	binary_to_hex(uint8_t* pBuf, int32_t nLength);
+
     inline string  wstring_to_string(const wstring& rhs) { return string(rhs.begin(), rhs.end()); }
     inline wstring string_to_wstring(const string& rhs) { return wstring(rhs.begin(), rhs.end()); }
 
+    inline void makelower(string& rhs)  { std::transform(rhs.begin(), rhs.end(), rhs.begin(), ::tolower); }
+    inline void makelower(wstring& rhs) { std::transform(rhs.begin(), rhs.end(), rhs.begin(), ::towlower); }
+    inline void makeupper(string& rhs)  { std::transform(rhs.begin(), rhs.end(), rhs.begin(), ::toupper); }
+    inline void makeupper(wstring& rhs) { std::transform(rhs.begin(), rhs.end(), rhs.begin(), ::towupper); }
 
 
     //////////////////////////////////////////////////////////////////////////////////////////////

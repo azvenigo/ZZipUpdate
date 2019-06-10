@@ -617,7 +617,10 @@ void ZipJob::RunDecompressionJob(void* pContext)
     if (!pZipJob->mbSkipCRC)
     {
         cout << "Total Files Verified:              " << nTotalFilesUpToDate << "\n";
-        cout << "Total Bytes Verified:              " << FormatFriendlyBytes(nTotalBytesVerified) << "(Rate:" << (nTotalBytesVerified / 1024) / (nTotalTimeOnFileVerification / 1000) << "MB/s)\n";
+        cout << "Total Bytes Verified:              " << FormatFriendlyBytes(nTotalBytesVerified);
+        if (nTotalTimeOnFileVerification > 0)
+            cout << " (Rate:" << (nTotalBytesVerified / 1024) / (nTotalTimeOnFileVerification / 1000) << "MB/s)";
+        cout << "\n";
     }
 
     bool bIsHTTPJob = (pZipJob->msPackageURL.substr(0, 4) == L"http");  // if the url starts with "http" then we're downloading 
@@ -635,9 +638,20 @@ void ZipJob::RunDecompressionJob(void* pContext)
         else
             cout << "Total Bytes Extracted:             ";
 
-        cout << FormatFriendlyBytes(nTotalBytesDownloaded) << " (Rate:" << (nTotalBytesDownloaded / 1024) / (diff.total_milliseconds()) << "MB/s)\n";
+        cout << FormatFriendlyBytes(nTotalBytesDownloaded);
+        
+        if (diff.total_milliseconds() > 0)
+            cout << " (Rate:" << (nTotalBytesDownloaded / 1024) / (diff.total_milliseconds()) << "MB/s)";
 
-        cout << "Total Uncompressed Bytes Written:  " << FormatFriendlyBytes(nTotalWrittenToDisk) << " (Rate:" << (nTotalWrittenToDisk / 1024) / (diff.total_milliseconds()) << "MB/s)\n";
+        cout << "\n";
+
+
+        cout << "Total Uncompressed Bytes Written:  " << FormatFriendlyBytes(nTotalWrittenToDisk);
+        
+        if (diff.total_milliseconds() > 0)
+            cout << " (Rate:" << (nTotalWrittenToDisk / 1024) / (diff.total_milliseconds()) << "MB/s)";
+
+        cout << "\n";
     }
     else
     {
@@ -647,10 +661,13 @@ void ZipJob::RunDecompressionJob(void* pContext)
             cout << "No files needed to be extracted.\n";
     }
 
-    cout << "[--------------------------------------------------------------]\n";
-    cout << "Total Job Time:                    " << diff.total_milliseconds() << "\n";
-    cout << "Total Threads:                     " << pZipJob->mnThreads << "\n";
-    cout << "[==============================================================]\n";
+    if (pZipJob->mbVerbose)
+    {
+        cout << "[--------------------------------------------------------------]\n";
+        cout << "Total Job Time:                    " << diff.total_milliseconds() << "\n";
+        cout << "Threads:                           " << pZipJob->mnThreads << "\n";
+        cout << "[==============================================================]\n";
+    }
 
     pZipJob->mJobStatus.mStatus = JobStatus::kFinished;
 }
@@ -661,8 +678,9 @@ void ZipJob::RunListJob(void* pContext)
 
     wstring sURL = pZipJob->msPackageURL;
 
-    if (pZipJob->mbVerbose)
-        wcout << "Running List Job. Package: " << sURL << "\n";
+    wcout << "List files in Package: " << sURL << "\n";
+    if (!pZipJob->msPattern.empty())
+        wcout << "Files that match pattern: \"" << pZipJob->msPattern << "\"\n";
 
     shared_ptr<cZZFile> pZZFile;
     if (!cZZFile::Open(sURL, cZZFile::ZZFILE_READ, pZZFile))
@@ -679,6 +697,8 @@ void ZipJob::RunListJob(void* pContext)
     }
 
     zipCD.DumpCD(cout, pZipJob->msPattern, pZipJob->mbVerbose, pZipJob->mOutputFormat);
+
+
 
     pZipJob->mJobStatus.mStatus = JobStatus::kFinished;
 }

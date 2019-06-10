@@ -869,22 +869,9 @@ void cZipCD::DumpCD(std::ostream& out, const wstring& sPattern, bool bVerbose, e
         out << NextLine(format);
     }
 
-    if (bVerbose)
-    {
-        // CD Stats
-        if (format == kHTML)
-            out << "<table border='1'>\n";
-
-        out << FormatStrings(format, "Total Files", "Total Folders", "Total Compressed Size", "Total Uncompressed Size", "Compression Ratio");
-        out << FormatStrings(format, to_string(GetNumTotalFiles()), to_string(GetNumTotalFolders()), to_string(GetTotalCompressedBytes()), to_string(GetTotalUncompressedBytes()), to_string((double)GetTotalCompressedBytes() / (double)GetTotalUncompressedBytes()));
-
-        if (format == kHTML)
-            out << "</table>\n";
-    }
-
-
     out << NextLine(format);
 
+    uint32_t nPatternMatchingFiles = 0;
 
     // CD Entries
     if (bVerbose)
@@ -907,6 +894,7 @@ void cZipCD::DumpCD(std::ostream& out, const wstring& sPattern, bool bVerbose, e
 
         if (FNMatch(sPattern, string_to_wstring(cdFileHeader.mFileName).c_str()))
         {
+            nPatternMatchingFiles++;
             if (bVerbose)
                 out << cdFileHeader.ToString(format).c_str();
             else
@@ -918,6 +906,29 @@ void cZipCD::DumpCD(std::ostream& out, const wstring& sPattern, bool bVerbose, e
 
     if (format == kHTML)
         out << "</table>\n";
+
+
+    out << NextLine(format);
+
+    if (bVerbose)
+    {
+        // CD Stats
+        if (format == kHTML)
+            out << "<table border='1'>\n";
+
+        out << FormatStrings(format, "Total Files", "Total Folders", "Total Compressed Size", "Total Uncompressed Size", "Compression Ratio");
+        out << FormatStrings(format, to_string(GetNumTotalFiles()), to_string(GetNumTotalFolders()), to_string(GetTotalCompressedBytes()), to_string(GetTotalUncompressedBytes()), to_string((double)GetTotalCompressedBytes() / (double)GetTotalUncompressedBytes()));
+
+        if (format == kHTML)
+            out << "</table>\n";
+    }
+
+    // If a pattern was specified then provide stats
+    if (!sPattern.empty())
+    {
+        out << "Found " << nPatternMatchingFiles << " out of " << GetNumTotalFiles() + GetNumTotalFolders() << " matching pattern: \"" << wstring_to_string(sPattern).c_str() << "\"\n";
+    }
+
 
     out << NextLine(format);
 }
