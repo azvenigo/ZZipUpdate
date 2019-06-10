@@ -58,6 +58,14 @@ bool ParseParams(int argc, _TCHAR* argv[])
         // first parameter is the launched app itself. Don't need it
         params.pop_front();
 
+        if (params.empty())
+        {
+            // command not found
+            wcout << "ERROR: no command specified\n";
+            return false;
+
+        }
+
         // next parameter should be the command
         wstring sCommand = *params.begin();
         params.pop_front();
@@ -95,7 +103,7 @@ bool ParseParams(int argc, _TCHAR* argv[])
         }
         else
         {
-            // command not found
+            // unknown command
             wcout << "ERROR: Unknown command: \"" << sCommand << "\"\n";
             return false;
         }
