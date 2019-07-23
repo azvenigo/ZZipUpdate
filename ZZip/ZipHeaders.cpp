@@ -428,12 +428,9 @@ bool cZip64EndOfCDLocator::Write(cZZFile& file)
     bool bSuccess = true;
     uint32_t nWritten = 0;
     bSuccess &= file.Write(cZZFile::ZZFILE_SEEK_END, sizeof(uint32_t), (uint8_t*)&mZip64EndOfCDLocatorTag, nWritten);
-
-
     bSuccess &= file.Write(cZZFile::ZZFILE_NO_SEEK, sizeof(uint32_t), (uint8_t*)&mDiskNumOfCD, nWritten);
     bSuccess &= file.Write(cZZFile::ZZFILE_NO_SEEK, sizeof(uint64_t), (uint8_t*)&mZip64EndofCDOffset, nWritten);
     bSuccess &= file.Write(cZZFile::ZZFILE_NO_SEEK, sizeof(uint32_t), (uint8_t*)&mNumTotalDisks, nWritten);
-
 
     if (!bSuccess)
     {
@@ -442,7 +439,6 @@ bool cZip64EndOfCDLocator::Write(cZZFile& file)
     }
 
     return true;
-
 }
 
 string cZip64EndOfCDLocator::FieldNames(eToStringFormat format)
@@ -550,7 +546,6 @@ bool cCDFileHeader::Write(cZZFile& file)
     bSuccess &= file.Write(cZZFile::ZZFILE_NO_SEEK, sizeof(uint32_t), (uint8_t*)&mCRC32, nWritten);
 
     uint32_t nNegOne = (uint32_t)-1;
-
     bSuccess &= file.Write(cZZFile::ZZFILE_NO_SEEK, sizeof(uint32_t), (uint8_t*)&nNegOne, nWritten);                             // compressed size
     bSuccess &= file.Write(cZZFile::ZZFILE_NO_SEEK, sizeof(uint32_t), (uint8_t*)&nNegOne, nWritten);                             // uncompressed size
     bSuccess &= file.Write(cZZFile::ZZFILE_NO_SEEK, sizeof(uint16_t), (uint8_t*)&mFilenameLength, nWritten);
@@ -831,13 +826,11 @@ bool cZipCD::ComputeCDRecords(uint64_t nStartOfCDOffset)
     mEndOfCDRecord.mNumCDRecordsThisDisk = mEndOfCDRecord.mNumTotalRecords;
     mEndOfCDRecord.mCDStartOffset = 0xffffffff;
 
-
     mZip64EndOfCDRecord.mSizeOfZiP64EndOfCDRecord = mZip64EndOfCDRecord.Size();
     mZip64EndOfCDRecord.mNumCDRecordsThisDisk = mCDFileHeaderList.size();
     mZip64EndOfCDRecord.mNumTotalRecords = mCDFileHeaderList.size();
     mZip64EndOfCDRecord.mNumBytesOfCD = Size();
     mZip64EndOfCDRecord.mCDStartOffset = nStartOfCDOffset;
-
 
     return true;
 }
@@ -906,7 +899,6 @@ void cZipCD::DumpCD(std::ostream& out, const wstring& sPattern, bool bVerbose, e
 
     if (format == kHTML)
         out << "</table>\n";
-
 
     out << NextLine(format);
 

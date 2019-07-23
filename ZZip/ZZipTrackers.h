@@ -53,13 +53,12 @@ public:
 
     friend ostream& operator << (ostream& os, const DecompressTaskResult& result) { os << "Filename:" << result.mFilename << " Status:" << result.mDecompressTaskStatus << " OSError:" << result.mOSErrorCode << " mBytesDownloaded:" << result.mBytesDownloaded << " mBytesWrittenToDisk:" << result.mBytesWrittenToDisk << " mRetriesRemaining:" << result.mRetriesRemaining << " Result:" << result.mResult;  return os; }
 
-    eDecompressTaskStatus	mDecompressTaskStatus;
-    uint32_t	            mOSErrorCode;
-    uint64_t	            mBytesDownloaded;
-    uint64_t	            mBytesWrittenToDisk;
-    int32_t		            mRetriesRemaining;
-
-    string		            mFilename;
+    eDecompressTaskStatus   mDecompressTaskStatus;
+    uint32_t                mOSErrorCode;
+    uint64_t                mBytesDownloaded;
+    uint64_t                mBytesWrittenToDisk;
+    int32_t                 mRetriesRemaining;
+    string                  mFilename;
     string                  mResult;
 };
 

@@ -48,12 +48,12 @@ public:
     cExtensibleFieldEntry(const cExtensibleFieldEntry& from);
     ~cExtensibleFieldEntry() {}
 
-    string					ToString();
-    string					HeaderToString();
+    string                      ToString();
+    string                      HeaderToString();
 
-    uint16_t				mnHeader;
-    uint16_t				mnSize;
-    std::shared_ptr<uint8_t>     mpData;
+    uint16_t                    mnHeader;
+    uint16_t                    mnSize;
+    std::shared_ptr<uint8_t>    mpData;
 };
 
 typedef list<cExtensibleFieldEntry> tExtensibleFieldList;

@@ -22,7 +22,7 @@ public:
     ZDecompressor();
     ~ZDecompressor();
 
-    int32_t	    Init();
+    int32_t     Init();
     int32_t     Shutdown();
 
     int32_t     InitStream(uint8_t* pInputBuf, int32_t nLength);
@@ -38,7 +38,7 @@ public:
     uint64_t	GetTotalOutputBytes() { return mTotalOutputBytes; }
 
 private:
-    bool		mInitialized;
+    bool        mInitialized;
     int32_t     mStatus;
 
     z_stream*	mpZStream;
@@ -56,7 +56,7 @@ public:
     ZCompressor();
     ~ZCompressor();
 
-    int32_t	    Init(int nCompressionLevel = Z_DEFAULT_COMPRESSION);
+    int32_t     Init(int nCompressionLevel = Z_DEFAULT_COMPRESSION);
     int32_t     Shutdown();
 
     int32_t     InitStream(uint8_t* pInputBuf, int32_t nLength);
@@ -73,7 +73,7 @@ public:
 
 
 private:
-    bool		mbInitted;
+    bool        mbInitted;
     int32_t     mStatus;
 
     z_stream*	mpZStream;
