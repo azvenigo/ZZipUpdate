@@ -21,8 +21,9 @@ If you want to save quite a bit of time and space building boost I recommend bui
 5) Run bootstrap.bat
 
 6) Run the following three commands
-    - Note: In this example I specify at temporary boost build folder that can be deleted after buildling.
+    - Note 1: In this example I specify at temporary boost build folder that can be deleted after buildling.
     - in this example "c:/temp/boost_build_temp/"
+    - Note 2: Update toolset with the version of Visual Studio you're using. (Can derive from environment variables.)
 
    
 b2 --build-dir=c:/temp/boost_build_temp/ threading=multi --with-date_time toolset=msvc-14.1 --build-type=complete
