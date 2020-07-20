@@ -33,14 +33,10 @@ enum
 
 
 // Factory
-bool cZZFile::Open(const string& sURL, bool bWrite, shared_ptr<cZZFile>& pFile)
+bool cZZFile::Open(const string& sURL, bool bWrite, shared_ptr<cZZFile>& pFile, bool bVerbose)
 {
     cZZFile* pNewFile = nullptr;
-    if (sURL.substr(0, kHTTPSTag.length()) == kHTTPSTag)
-    {
-        pNewFile = new cHTTPSFile();
-    }
-    else if (sURL.substr(0, kHTTPTag.length()) == kHTTPTag)
+    if (sURL.substr(0, 4) == "http")
     {
         pNewFile = new cHTTPFile();
     }
@@ -50,12 +46,12 @@ bool cZZFile::Open(const string& sURL, bool bWrite, shared_ptr<cZZFile>& pFile)
     }
 
     pFile.reset(pNewFile);
-    return pNewFile->OpenInternal(sURL, bWrite);   // call protected virtualized Open
+    return pNewFile->OpenInternal(sURL, bWrite, bVerbose);   // call protected virtualized Open
 }
 
-bool cZZFile::Open(const wstring& sURL, bool bWrite, shared_ptr<cZZFile>& pFile)
+bool cZZFile::Open(const wstring& sURL, bool bWrite, shared_ptr<cZZFile>& pFile, bool bVerbose)
 {
-    return Open(string(sURL.begin(), sURL.end()), bWrite, pFile);
+    return Open(string(sURL.begin(), sURL.end()), bWrite, pFile, bVerbose);
 }
 
 
@@ -72,9 +68,10 @@ cZZFileLocal::~cZZFileLocal()
     cZZFileLocal::Close();
 }
 
-bool cZZFileLocal::OpenInternal(string sURL, bool bWrite)
+bool cZZFileLocal::OpenInternal(string sURL, bool bWrite, bool bVerbose)
 {
     mnLastError = kZZfileError_None;
+    mbVerbose = bVerbose;
 
     if (bWrite)
         mFileStream.open(sURL, ios_base::in | ios_base::out | ios_base::binary | ios_base::trunc);
@@ -84,7 +81,7 @@ bool cZZFileLocal::OpenInternal(string sURL, bool bWrite)
     if (mFileStream.fail())
     {
         mnLastError = errno;
-        //		cerr << "Failed to open file:" << sURL.c_str() << "! Reason: " << errno << "\n";
+        //cerr << "Failed to open file:" << sURL.c_str() << "! Reason: " << errno << "\n";
         return false;
     }
 
@@ -183,6 +180,8 @@ bool cZZFileLocal::Write(int64_t nOffset, uint32_t nBytes, uint8_t* pSource, uin
 
 cHTTPFile::cHTTPFile() : cZZFile()
 {
+    mbHTTPSConnection = false;
+    mpSSLContext = nullptr;
 }
 
 cHTTPFile::~cHTTPFile()
@@ -190,8 +189,11 @@ cHTTPFile::~cHTTPFile()
     cHTTPFile::Close();
 }
 
-bool cHTTPFile::OpenInternal(string sURL, bool bWrite)       // todo maybe someday use real URI class
+
+bool cHTTPFile::OpenInternal(string sURL, bool bWrite, bool bVerbose)       // todo maybe someday use real URI class
 {
+    mnLastError = kZZfileError_None;
+    mbVerbose = bVerbose;
     if (bWrite)
     {
         mnLastError = kZZFileError_Unsupported;
@@ -199,108 +201,136 @@ bool cHTTPFile::OpenInternal(string sURL, bool bWrite)       // todo maybe somed
         return false;
     }
 
-    bool bShowHeaders = false;
+    msURL = sURL;
 
-    // Ensure this isn't an HTTPS request
-    if (sURL.substr(0, kHTTPSTag.length()) == kHTTPSTag)
+    const int kMaxRetries = 5;
+    int nAttemptsLeft = kMaxRetries;
+    while (nAttemptsLeft-- > 0)
     {
-        mnLastError = kZZFileError_URL_Error;
-        std::cout << "Attempting to open SSL URL with cHTTP instead of cHTTPS.\n";
-        return false;
-    }
-
-    sURL = sURL.substr(kHTTPTag.length());		// strip off the "http://"
-    msHost = sURL.substr(0, sURL.find_first_of("/"));
-    msPath = sURL.substr(msHost.length());
-
-    // Resolve the domain name
-    tcp::resolver resolver(mIOService);
-    std::auto_ptr<tcp::resolver::query> pQuery(new tcp::resolver::query(msHost, "http"));
-    tcp::resolver::iterator ipIterator = resolver.resolve(*pQuery);
-
-    boost::asio::ip::tcp::socket sock(mIOService);
-    boost::asio::connect(sock, ipIterator);
-
-    // Retrieve headers
-    try
-    {
-        // Form the request
-        boost::asio::streambuf request;
-        std::ostream request_stream(&request);
-
-        request_stream << "GET " << msPath << " HTTP/1.1\r\n";
-        request_stream << "Host: " << msHost << "\r\n";
-        request_stream << "Accept: */*\r\n";
-        request_stream << "Cache-Control: no-cache\r\n";
-        request_stream << "Connection: close\r\n\r\n";
-        request_stream.flush();
-
-        // Fire it off
-        boost::asio::write(sock, request);
-
-
-        // read the first line
-        boost::asio::streambuf response;
-        boost::asio::read_until(sock, response, "\r\n");
-
-        // check response
-        std::istream response_stream(&response);
-        std::string http_version;
-
-        response_stream >> http_version;
-
-        uint32_t nHTTPStatusCode = 0;
-        response_stream >> nHTTPStatusCode;
-
-        string sStatusString;
-        getline(response_stream, sStatusString);
-
-        if (!response_stream || http_version.substr(0, 5) != "HTTP/")
+        // Strip URL tag if necessary (redirect URL may return http)
+        string sURL(msURL);
+        if (sURL.substr(0, kHTTPSTag.length()) == kHTTPSTag)
         {
-            mnLastError = nHTTPStatusCode;
-            cout << "Invalid response\n";
+            mbHTTPSConnection = true;
+            sURL = sURL.substr(kHTTPSTag.length());		// strip off the "https://"
+        }
+        else if (sURL.substr(0, kHTTPTag.length()) == kHTTPTag)
+        {
+            mbHTTPSConnection = false;
+            sURL = sURL.substr(kHTTPTag.length());		// strip off the "http://"
+        }
+
+        msHost = sURL.substr(0, sURL.find_first_of("/"));
+        msPath = sURL.substr(msHost.length());
+
+        // Resolve the domain name
+        tcp::resolver resolver(mIOService);
+
+        // Note: Unfortunately SSL sockets don't inherit from or implement the same interface as TCP sockets so we can't use a single pointer
+        // So we have to use two different socket pointers and use the one that matches the connection we're trying to make
+        auto_ptr<boost::asio::ip::tcp::socket> pSock;   
+        auto_ptr<ssl::stream<ip::tcp::socket>> pSSLSock;
+
+        if (mbHTTPSConnection)
+        {
+            std::auto_ptr<tcp::resolver::query> pQuery(new tcp::resolver::query(msHost, "https"));
+            tcp::resolver::iterator ipIterator = resolver.resolve(*pQuery);
+            mpSSLContext = new ssl::context(boost::asio::ssl::context::sslv23);
+            pSSLSock.reset(new ssl::stream<ip::tcp::socket>(mIOService, *mpSSLContext));
+            boost::asio::connect(pSSLSock->lowest_layer(), ipIterator);
+            pSSLSock->handshake(ssl::stream_base::handshake_type::client);
+        }
+        else
+        {
+            std::auto_ptr<tcp::resolver::query> pQuery(new tcp::resolver::query(msHost, "http"));
+            tcp::resolver::iterator ipIterator = resolver.resolve(*pQuery);
+            pSock.reset(new boost::asio::ip::tcp::socket(mIOService));
+            boost::asio::connect(*pSock, ipIterator);
+        }
+
+        // Retrieve headers
+        try
+        {
+            // Form the request
+            boost::asio::streambuf request;
+            std::ostream request_stream(&request);
+
+            request_stream << "GET " << msPath << " HTTP/1.1\r\n";
+            request_stream << "Host: " << msHost << "\r\n";
+            request_stream << "Accept: */*\r\n";
+            request_stream << "Cache-Control: no-cache\r\n";
+            request_stream << "Connection: close\r\n\r\n";
+            request_stream.flush();
+
+            // Fire it off
+            if (mbHTTPSConnection)
+                boost::asio::write(*pSSLSock, request);
+            else
+                boost::asio::write(*pSock, request);
+
+
+            // read the first line
+            boost::asio::streambuf response;
+            if (mbHTTPSConnection)
+                boost::asio::read_until(*pSSLSock, response, "\r\n");
+            else
+                boost::asio::read_until(*pSock, response, "\r\n");
+
+            std::istream response_stream(&response);
+
+            mConnectionResponseHeaders.Reset();
+            if (!mConnectionResponseHeaders.Parse(response_stream, mbVerbose) || mConnectionResponseHeaders.msHTTPVersion.substr(0, 5) != "HTTP/")
+            {
+                mnLastError = mConnectionResponseHeaders.mnHTTPStatusCode;
+                cout << "Invalid response\n";
+                return false;
+            }
+
+            if (mConnectionResponseHeaders.mnHTTPStatusCode == 200)
+            {
+                int64_t nFileSize = 0;
+                if (!mConnectionResponseHeaders.GetInt("Content-Length", nFileSize))
+                {
+                    cout << "Couldn't find Content-Length header!\n";
+                    return false;
+                }
+                mnFileSize = (uint64_t)nFileSize;
+                cout << "Opened HTTP server_host:\"" << msHost << "\"\n server_path:\"" << msPath << "\"\n";
+
+                return true;
+            }
+            else if (mConnectionResponseHeaders.mnHTTPStatusCode == 301 || mConnectionResponseHeaders.mnHTTPStatusCode == 302 || mConnectionResponseHeaders.mnHTTPStatusCode == 308) // redirect
+            {
+                mConnectionResponseHeaders.GetString("Location", msURL);
+                cout << "redirection to:" << msURL << "\n";
+
+            }
+            else if (mConnectionResponseHeaders.mnHTTPStatusCode == 504 /*gateway timeout*/ || mConnectionResponseHeaders.mnHTTPStatusCode == 509 /*network connect timeout*/)
+            {
+                // try again
+                // TBD look at server response on when to retry
+                cout << "timeout...retry. Attempts left:" << nAttemptsLeft << "\n";
+            }
+            else
+            {
+                // not a retryable error
+                nAttemptsLeft = 0;
+
+                mnLastError = mConnectionResponseHeaders.mnHTTPStatusCode;
+                cout << "Response Status Code " << mConnectionResponseHeaders.mnHTTPStatusCode << " message: \"" << mConnectionResponseHeaders.msStatus << "\"\n";
+                return false;
+
+            }
+        }
+        catch (exception& e)
+        {
+            mnLastError = kZZFileError_Exception;
+            cout << "Exception: " << e.what() << "\n";
             return false;
         }
-        if (nHTTPStatusCode != 200)
-        {
-            mnLastError = nHTTPStatusCode;
-            cout << "Response Status Code " << nHTTPStatusCode << " message: \"" << sStatusString << "\"\n";
-            return false;
-        }
-
-        // get headers
-        boost::asio::read_until(sock, response, "\r\n\r\n");
-
-        list<std::string> headersList;
-
-        string sHeader;
-        while (std::getline(response_stream, sHeader) && sHeader != "\r")
-        {
-            // strip off any trailing '\r'
-            if (sHeader.substr(sHeader.length() - 1) == "\r")
-                sHeader = sHeader.substr(0, sHeader.length() - 1);
-            // strip off any trailing '\n'
-            if (sHeader.substr(sHeader.length() - 1) == "\n")
-                sHeader = sHeader.substr(0, sHeader.length() - 1);
-
-            headersList.push_back(sHeader);
-            if (bShowHeaders)
-                cout << "header: \"" << sHeader << "\"\n";
-        }
-
-        ParseHeaders(headersList);      // extract whatever we need
-
-    }
-    catch (exception& e)
-    {
-        mnLastError = kZZFileError_Exception;
-        cout << "Exception: " << e.what() << "\n";
-        return false;
     }
 
-    cout << "Opened HTTP server_host:\"" << msHost << "\"\n server_path:\"" << msPath << "\"\n filesize:" << mnFileSize << "\n";
-
-    return true;
+    return false;
 }
 
 // Tracking stats
@@ -309,14 +339,27 @@ atomic<int64_t> gnTotalRequestsIssued = 0;
 
 bool cHTTPFile::Close()
 {
-    //cout << "Total HTTP Requests:" << gnTotalRequestsIssued << "\n";
-    //cout << "Total HTTP bytes requested:" << gnTotalHTTPBytesRequested << "\n";
+    if (mbVerbose)
+    {
+        cout << "Total HTTP Requests:" << gnTotalRequestsIssued << "\n";
+        cout << "Total HTTP bytes requested:" << gnTotalHTTPBytesRequested << "\n";
+    }
+
+    delete mpSSLContext;
+    mbHTTPSConnection = false;
 
     return true;
 }
 
-
 bool cHTTPFile::Read(int64_t nOffset, uint32_t nBytes, uint8_t* pDestination, uint32_t& nBytesRead)
+{
+    if (mbHTTPSConnection)
+        return ReadInternalSSL(nOffset, nBytes, pDestination, nBytesRead);
+
+    return ReadInternal(nOffset, nBytes, pDestination, nBytesRead);
+}
+
+bool cHTTPFile::ReadInternal(int64_t nOffset, uint32_t nBytes, uint8_t* pDestination, uint32_t& nBytesRead)
 {
     mnLastError = kZZfileError_None;
 
@@ -354,7 +397,6 @@ bool cHTTPFile::Read(int64_t nOffset, uint32_t nBytes, uint8_t* pDestination, ui
 
     if (nBytesToRequest > 0)
     {
-        bool bShowHeaders = false;
         try
         {
             // Resolve the domain name
@@ -387,51 +429,15 @@ bool cHTTPFile::Read(int64_t nOffset, uint32_t nBytes, uint8_t* pDestination, ui
             // read the first line
             boost::asio::streambuf response;
             boost::asio::read_until(sock, response, "\r\n");
+            std::istream response_stream(&response);
 
             // check response
-            std::istream response_stream(&response);
-            std::string http_version;
-
-            response_stream >> http_version;
-
-            uint32_t nHTTPStatusCode = 0;
-            response_stream >> nHTTPStatusCode;
-
-            string sStatusString;
-            getline(response_stream, sStatusString);
-
-            if (!response_stream || http_version.substr(0, 5) != "HTTP/")
+            cHTTPResponseHeaders responseHeaders;
+            if (!responseHeaders.Parse(response_stream, mbVerbose) || responseHeaders.msHTTPVersion.substr(0, 5) != "HTTP/")
             {
-                mnLastError = nHTTPStatusCode;
+                mnLastError = responseHeaders.mnHTTPStatusCode;
                 cout << "Invalid response\n";
                 return false;
-            }
-            if (!(nHTTPStatusCode == 200 || nHTTPStatusCode == 206))
-            {
-                mnLastError = nHTTPStatusCode;
-                cout << "Response Status Code " << nHTTPStatusCode << " message: \"" << sStatusString << "\"\n";
-                return false;
-            }
-
-            // get headers
-            boost::asio::read_until(sock, response, "\r\n\r\n");
-
-            list<std::string> headersList;
-
-            string sHeader;
-            while (std::getline(response_stream, sHeader) && sHeader != "\r")
-            {
-                // strip off any trailing '\r'
-                if (sHeader.substr(sHeader.length() - 1) == "\r")
-                    sHeader = sHeader.substr(0, sHeader.length() - 1);
-                // strip off any trailing '\n'
-                if (sHeader.substr(sHeader.length() - 1) == "\n")
-                    sHeader = sHeader.substr(0, sHeader.length() - 1);
-
-
-                headersList.push_back(sHeader);
-                if (bShowHeaders)
-                    cout << "header: \"" << sHeader << "\"\n";
             }
 
 
@@ -495,161 +501,7 @@ bool cHTTPFile::Write(int64_t, uint32_t, uint8_t*, uint32_t&)
 }
 
 
-bool cHTTPFile::ParseHeaders(list<std::string>& headersList)
-{
-    for (list<std::string>::iterator it = headersList.begin(); it != headersList.end(); it++)
-    {
-        std::string sHeader(*it);
-
-        // add headers to look for here
-        const std::string ksContentLengthTag("Content-Length: ");
-        const std::string ksContentTypeTag("Content-Type: ");
-
-        if (sHeader.substr(0, ksContentLengthTag.length()) == ksContentLengthTag)
-        {
-            std::string sValue = sHeader.substr(ksContentLengthTag.length());        // get everything after the tag
-
-            mnFileSize = boost::lexical_cast<uint64_t> (sValue);
-        }
-        else if (sHeader.substr(0, ksContentTypeTag.length()) == ksContentTypeTag)
-        {
-
-        }
-    }
-
-    return true;
-}
-
-
-cHTTPSFile::cHTTPSFile() : cHTTPFile()
-{
-}
-
-cHTTPSFile::~cHTTPSFile()
-{
-    delete mpSSLContext;
-}
-
-
-bool cHTTPSFile::OpenInternal(string sURL, bool bWrite)
-{
-    mnLastError = kZZfileError_None;
-    if (bWrite)
-    {
-        mnLastError = kZZFileError_Unsupported;
-        std::cerr << "cHTTPSFile does not support writing.....yet........maybe ever." << std::endl;
-        return false;
-    }
-
-    bool bShowHeaders = false;
-
-    // Strip off "http://" if needed
-    if (sURL.substr(0, kHTTPTag.length()) == kHTTPSTag)
-    {
-        mnLastError = kZZFileError_URL_Error;
-        std::cout << "Attempting to open non-SSL URL with cHTTPS instead of cHTTP.\n";
-        return false;
-    }
-
-    sURL = sURL.substr(kHTTPSTag.length());		// strip off the "https://"
-    msHost = sURL.substr(0, sURL.find_first_of("/"));
-    msPath = sURL.substr(msHost.length());
-
-    mpSSLContext = new ssl::context(boost::asio::ssl::context::sslv23);
-    auto_ptr<ssl::stream<ip::tcp::socket>> pSock(new ssl::stream<ip::tcp::socket>(mIOService, *mpSSLContext));
-
-    // Resolve the domain name
-    tcp::resolver resolver(mIOService);
-    std::auto_ptr<tcp::resolver::query> pQuery(new tcp::resolver::query(msHost, "https"));
-    tcp::resolver::iterator ipIterator = resolver.resolve(*pQuery);
-    boost::asio::connect(pSock->lowest_layer(), ipIterator);
-
-    pSock->handshake(ssl::stream_base::handshake_type::client);
-
-
-    // Retrieve headers
-    try
-    {
-        // Form the request
-        boost::asio::streambuf request;
-        std::ostream request_stream(&request);
-
-        request_stream << "GET " << msPath << " HTTP/1.1\r\n";
-        request_stream << "Host: " << msHost << "\r\n";
-        request_stream << "Accept: */*\r\n";
-        request_stream << "Cache-Control: no-cache\r\n";
-        request_stream << "Connection: close\r\n\r\n";
-        request_stream.flush();
-
-        // Fire it off
-        boost::asio::write(*pSock, request);
-
-
-        // read the first line
-        boost::asio::streambuf response;
-        boost::asio::read_until(*pSock, response, "\r\n");
-
-        // check response
-        std::istream response_stream(&response);
-        std::string http_version;
-
-        response_stream >> http_version;
-
-        uint32_t nHTTPStatusCode = 0;
-        response_stream >> nHTTPStatusCode;
-
-        string sStatusString;
-        getline(response_stream, sStatusString);
-
-        if (!response_stream || http_version.substr(0, 5) != "HTTP/")
-        {
-            mnLastError = nHTTPStatusCode;
-            cout << "Invalid response\n";
-            return false;
-        }
-        if (nHTTPStatusCode != 200)
-        {
-            mnLastError = nHTTPStatusCode;
-            cout << "Response Status Code " << nHTTPStatusCode << " message: \"" << sStatusString << "\"\n";
-            return false;
-        }
-
-        // get headers
-        boost::asio::read_until(*pSock, response, "\r\n\r\n");
-
-        list<std::string> headersList;
-
-        string sHeader;
-        while (std::getline(response_stream, sHeader) && sHeader != "\r")
-        {
-            // strip off any trailing '\r'
-            if (sHeader.substr(sHeader.length() - 1) == "\r")
-                sHeader = sHeader.substr(0, sHeader.length() - 1);
-            // strip off any trailing '\n'
-            if (sHeader.substr(sHeader.length() - 1) == "\n")
-                sHeader = sHeader.substr(0, sHeader.length() - 1);
-
-            headersList.push_back(sHeader);
-            if (bShowHeaders)
-                cout << "header: \"" << sHeader << "\"\n";
-        }
-
-        ParseHeaders(headersList);      // extract whatever we need
-
-    }
-    catch (exception& e)
-    {
-        mnLastError = kZZFileError_Exception;
-        cout << "Exception: " << e.what() << "\n";
-        return false;
-    }
-
-    cout << "Opened HTTPS host:\"" << msHost << "\"\n path:\"" << msPath << "\"\n filesize:" << mnFileSize << "\n";
-
-    return true;
-}
-
-bool cHTTPSFile::Read(int64_t nOffset, uint32_t nBytes, uint8_t* pDestination, uint32_t& nBytesRead)
+bool cHTTPFile::ReadInternalSSL(int64_t nOffset, uint32_t nBytes, uint8_t* pDestination, uint32_t& nBytesRead)
 {
     mnLastError = kZZfileError_None;
 
@@ -687,8 +539,6 @@ bool cHTTPSFile::Read(int64_t nOffset, uint32_t nBytes, uint8_t* pDestination, u
 
     if (nBytesToRequest > 0)
     {
-        bool bShowHeaders = false;
-
         try
         {
             if (!mpSSLContext)
@@ -731,51 +581,15 @@ bool cHTTPSFile::Read(int64_t nOffset, uint32_t nBytes, uint8_t* pDestination, u
             // read the first line
             boost::asio::streambuf response;
             boost::asio::read_until(*pSock, response, "\r\n");
+            std::istream response_stream(&response);
 
             // check response
-            std::istream response_stream(&response);
-            std::string http_version;
-
-            response_stream >> http_version;
-
-            uint32_t nHTTPStatusCode = 0;
-            response_stream >> nHTTPStatusCode;
-
-            string sStatusString;
-            getline(response_stream, sStatusString);
-
-            if (!response_stream || http_version.substr(0, 5) != "HTTP/")
+            cHTTPResponseHeaders responseHeaders;
+            if (!responseHeaders.Parse(response_stream, mbVerbose) || responseHeaders.msHTTPVersion.substr(0, 5) != "HTTP/")
             {
-                mnLastError = nHTTPStatusCode;
-                cout << "Invalid response\n";
+                mnLastError = responseHeaders.mnHTTPStatusCode;
+                cerr << "Invalid response\n";
                 return false;
-            }
-            if (!(nHTTPStatusCode == 200 || nHTTPStatusCode == 206))
-            {
-                mnLastError = nHTTPStatusCode;
-                cout << "Response Status Code " << nHTTPStatusCode << " message: \"" << sStatusString << "\"\n";
-                return false;
-            }
-
-            // get headers
-            boost::asio::read_until(*pSock, response, "\r\n\r\n");
-
-            list<std::string> headersList;
-
-            string sHeader;
-            while (std::getline(response_stream, sHeader) && sHeader != "\r")
-            {
-                // strip off any trailing '\r'
-                if (sHeader.substr(sHeader.length() - 1) == "\r")
-                    sHeader = sHeader.substr(0, sHeader.length() - 1);
-                // strip off any trailing '\n'
-                if (sHeader.substr(sHeader.length() - 1) == "\n")
-                    sHeader = sHeader.substr(0, sHeader.length() - 1);
-
-
-                headersList.push_back(sHeader);
-                if (bShowHeaders)
-                    cout << "header: \"" << sHeader << "\"\n";
             }
 
 
@@ -806,7 +620,7 @@ bool cHTTPSFile::Read(int64_t nOffset, uint32_t nBytes, uint8_t* pDestination, u
                 else
                 {
                     mnLastError = ec.value();
-                    cout << "Didn't get right number of bytes!\n";
+                    cerr << "Didn't get right number of bytes!\n";
                     return false;
                 }
             }
@@ -814,7 +628,7 @@ bool cHTTPSFile::Read(int64_t nOffset, uint32_t nBytes, uint8_t* pDestination, u
         catch (exception& e)
         {
             mnLastError = kZZFileError_Exception;
-            cout << "Exception: " << e.what() << "\n";
+            cerr << "Exception: " << e.what() << "\n";
 
             return false;
         }
@@ -832,16 +646,97 @@ bool cHTTPSFile::Read(int64_t nOffset, uint32_t nBytes, uint8_t* pDestination, u
     return true;
 }
 
-bool cHTTPSFile::Write(int64_t, uint32_t, uint8_t*, uint32_t&)
+cHTTPResponseHeaders::cHTTPResponseHeaders()
 {
-    mnLastError = kZZFileError_Unsupported;
-    std::cerr << "cHTTPSFile does not support writing.....yet........maybe ever." << std::endl;
-    return false;
+    Reset();
 }
 
-bool cHTTPSFile::Close()
+void cHTTPResponseHeaders::Reset()
 {
-    delete mpSSLContext;
-    mpSSLContext = NULL;
+    msHTTPVersion.clear();
+    mnHTTPStatusCode = 0;
+    msStatus.clear();
+    mNameToValueMap.clear();
+}
+
+bool cHTTPResponseHeaders::Parse(std::istream& response_stream, bool bVerbose)
+{
+    try
+    {
+//		std::istream response_stream(&response);
+		std::string http_version;
+
+		response_stream >> msHTTPVersion;
+        if (bVerbose) cout << "HTTPVersion: " << msHTTPVersion << "\n";
+
+		response_stream >> mnHTTPStatusCode;
+        if (bVerbose) cout << "HTTPStatusCode: " << mnHTTPStatusCode << "\n";
+
+		getline(response_stream, msStatus);
+        if (bVerbose) cout << "Status: " << msStatus << "\n";
+
+		string sHeader;
+		while (std::getline(response_stream, sHeader) && sHeader != "\r")
+		{
+			// strip off any trailing '\r'
+			if (sHeader.substr(sHeader.length() - 1) == "\r")
+				sHeader = sHeader.substr(0, sHeader.length() - 1);
+			// strip off any trailing '\n'
+			if (sHeader.substr(sHeader.length() - 1) == "\n")
+				sHeader = sHeader.substr(0, sHeader.length() - 1);
+
+			if (bVerbose)
+				cout << "header: \"" << sHeader << "\"\n";
+
+            // Extract name and value
+            size_t nColonIndex = sHeader.find(':');
+            if (nColonIndex != string::npos)
+            {
+                string sName = sHeader.substr(0, nColonIndex);
+                string sValue = sHeader.substr(nColonIndex+1);
+
+                boost::trim_left(sName);
+                boost::trim_left(sValue);
+
+                mNameToValueMap[sName] = sValue;
+            }
+            else
+            {
+                mNameToValueMap[sHeader] == ""; // create map entry for header name with empty string
+            }
+		}
+
+    }
+    catch (exception& e)
+    {
+        cerr << "Exception: " << e.what() << "\n";
+        return false;
+    }
+
+    return true;
+}
+
+bool cHTTPResponseHeaders::Contains(const string& sNameIn)
+{
+    return mNameToValueMap.find(sNameIn) != mNameToValueMap.end();
+}
+
+bool cHTTPResponseHeaders::GetString(const string& sNameIn, string& sValueOut)
+{
+    map<string, string>::iterator findIt = mNameToValueMap.find(sNameIn);
+    if (findIt == mNameToValueMap.end())
+        return false;
+
+    sValueOut = (*findIt).second;
+    return true;
+}
+
+bool cHTTPResponseHeaders::GetInt(const string& sNameIn, int64_t& nValueOut)
+{
+    string sValueOut;
+    if (!GetString(sNameIn, sValueOut))
+        return false;
+
+    nValueOut = boost::lexical_cast<int64_t> (sValueOut);
     return true;
 }

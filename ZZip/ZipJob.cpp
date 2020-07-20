@@ -216,7 +216,7 @@ void ZipJob::RunDiffJob(void* pContext)
     boost::posix_time::ptime  startTime = boost::posix_time::microsec_clock::local_time();
 
     shared_ptr<cZZFile> pZZFile;
-    if (!cZZFile::Open(pZipJob->msPackageURL, cZZFile::ZZFILE_READ, pZZFile))
+    if (!cZZFile::Open(pZipJob->msPackageURL, cZZFile::ZZFILE_READ, pZZFile, pZipJob->mbVerbose))
     {
         pZipJob->mJobStatus.SetError(JobStatus::kError_OpenFailed, L"Failed to open package: \"" + pZipJob->msPackageURL + L"\"");
         return;
@@ -409,7 +409,7 @@ bool ZipJob::FileNeedsUpdate(const wstring& sPath, uint64_t nComparedFileSize, u
         wcout << "Verifying file " << sPath;
 
     shared_ptr<cZZFile> pLocalFile;
-    if (!cZZFile::Open(sPath, cZZFile::ZZFILE_READ, pLocalFile))	// If no local file it clearly needs to be updated
+    if (!cZZFile::Open(sPath, cZZFile::ZZFILE_READ, pLocalFile, mbVerbose))	// If no local file it clearly needs to be updated
     {
         if (mbVerbose)
             wcout << "...missing. NEEDS UPDATE.\n";
@@ -683,7 +683,7 @@ void ZipJob::RunListJob(void* pContext)
         wcout << "Files that match pattern: \"" << pZipJob->msPattern << "\"\n";
 
     shared_ptr<cZZFile> pZZFile;
-    if (!cZZFile::Open(sURL, cZZFile::ZZFILE_READ, pZZFile))
+    if (!cZZFile::Open(sURL, cZZFile::ZZFILE_READ, pZZFile, pZipJob->mbVerbose))
     {
         pZipJob->mJobStatus.SetError(JobStatus::kError_OpenFailed, L"Failed to open package: \"" + sURL + L"\"");
         return;

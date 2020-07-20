@@ -42,8 +42,8 @@ public:
 
     // Factory Construction
     // returns either a cZZFileLocal, cHTTPFile* or a cHTTPSFile* depending on the url needs
-    static bool         Open(const string& sURL, bool bWrite, shared_ptr<cZZFile>& pFile);
-    static bool         Open(const wstring& sURL, bool bWrite, shared_ptr<cZZFile>& pFile);	    // wstring version for convenience
+    static bool         Open(const string& sURL, bool bWrite, shared_ptr<cZZFile>& pFile, bool bVerbose = false);
+    static bool         Open(const wstring& sURL, bool bWrite, shared_ptr<cZZFile>& pFile, bool bVerbose = false);	    // wstring version for convenience
 
     virtual             ~cZZFile() {};
 
@@ -57,8 +57,9 @@ public:
 protected:
     cZZFile();          // private constructor.... use cZZFile::Open factory function for construction
 
-    virtual bool	    OpenInternal(string sURL, bool bWrite) = 0;
+    virtual bool	    OpenInternal(string sURL, bool bWrite, bool bVerbose) = 0;
     string			    msPath;
+    bool                mbVerbose;
     uint64_t		    mnFileSize;
     int64_t             mnLastError;
 };
@@ -78,7 +79,7 @@ public:
 protected:
     cZZFileLocal(); // private constructor.... use cZZFile::Open factory function for construction
 
-    virtual bool    OpenInternal(string sURL, bool bWrite);
+    virtual bool    OpenInternal(string sURL, bool bWrite, bool bVerbose);
 
 protected:
 	fstream         mFileStream;
@@ -88,7 +89,31 @@ protected:
 
 
 
+//////////////////////////////////////////////////////////////////////////////////////////
+class cHTTPResponseHeaders
+{
+public:
 
+    cHTTPResponseHeaders();
+
+    void Reset();
+
+    bool Parse(std::istream& response_stream, bool bVerbose = false);
+
+    bool GetString(const string& sNameIn, string& sValueOut);
+    bool GetInt(const string& sNameIn, int64_t& nValueOut);
+    bool Contains(const string& sNameIn);
+
+    string      msHTTPVersion;
+    uint32_t    mnHTTPStatusCode;
+    string      msStatus;
+
+private:
+    bool ParseHeaders(list<std::string>& headersList);
+
+    map<string, string> mNameToValueMap;
+
+};
 
 //////////////////////////////////////////////////////////////////////////////////////////
 class cHTTPFile : public cZZFile
@@ -104,30 +129,20 @@ public:
 protected:
     cHTTPFile();    // private constructor.... use cZZFile::Open factory function for construction
 
-    virtual bool	OpenInternal(string sURL, bool bWrite);
-    bool            ParseHeaders(list<std::string>& headersList);
+    virtual bool	OpenInternal(string sURL, bool bWrite, bool bVerbose);
+    bool            ReadInternal(int64_t nOffset, uint32_t nBytes, uint8_t* pDestination, uint32_t& nBytesRead);
+    bool            ReadInternalSSL(int64_t nOffset, uint32_t nBytes, uint8_t* pDestination, uint32_t& nBytesRead);
 
-    string          msHost;
+    string                              msURL;
+    string                              msHost;
 
-    boost::asio::io_service mIOService;
+    boost::asio::io_service             mIOService;
+    cHTTPResponseHeaders                mConnectionResponseHeaders;
 
-    HTTPCache   mCache;     // for caching requests
-};
+    // HTTPS related
+    bool                                mbHTTPSConnection;
+    atomic <boost::asio::ssl::context*> mpSSLContext;
 
-//////////////////////////////////////////////////////////////////////////////////////////
-class cHTTPSFile : public cHTTPFile
-{
-    friend class cZZFile;
-public:
-	virtual         ~cHTTPSFile();
-	virtual bool    Close();
-	virtual bool    Read(int64_t nOffset, uint32_t nBytes, uint8_t* pDestination, uint32_t& nBytesRead);
-    virtual bool    Write(int64_t, uint32_t, uint8_t*, uint32_t&);    // not permitted
+    HTTPCache                           mCache;
 
-protected:
-    cHTTPSFile();   // private constructor.... use cZZFile::Open factory function for construction
-
-    virtual bool    OpenInternal(string sURL, bool bWrite);
-
-	atomic <boost::asio::ssl::context*> mpSSLContext;
 };
