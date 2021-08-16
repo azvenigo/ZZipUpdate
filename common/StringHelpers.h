@@ -14,6 +14,8 @@
 
 #include <string>
 #include <cctype>
+#include <locale>
+#include <codecvt>
 #include <boost/lexical_cast.hpp>
 
 using namespace std;
@@ -27,13 +29,37 @@ namespace StringHelpers
     string	int_to_hex_string(uint64_t nVal);
     string	binary_to_hex(uint8_t* pBuf, int32_t nLength);
 
-    inline string  wstring_to_string(const wstring& rhs) { return string(rhs.begin(), rhs.end()); }
-    inline wstring string_to_wstring(const string& rhs) { return wstring(rhs.begin(), rhs.end()); }
+    
 
-    inline void makelower(string& rhs)  { std::transform(rhs.begin(), rhs.end(), rhs.begin(), ::tolower); }
-    inline void makelower(wstring& rhs) { std::transform(rhs.begin(), rhs.end(), rhs.begin(), ::towlower); }
-    inline void makeupper(string& rhs)  { std::transform(rhs.begin(), rhs.end(), rhs.begin(), ::toupper); }
-    inline void makeupper(wstring& rhs) { std::transform(rhs.begin(), rhs.end(), rhs.begin(), ::towupper); }
+    inline string  wstring_to_string(const wstring& rhs)
+    {
+        using convert_typeX = std::codecvt_utf8<wchar_t>;
+        std::wstring_convert<convert_typeX, wchar_t> converterX;
+
+        return converterX.to_bytes(rhs);
+    }
+
+    inline wstring string_to_wstring(const string& rhs)
+    {
+        using convert_typeX = std::codecvt_utf8<wchar_t>;
+        std::wstring_convert<convert_typeX, wchar_t> converterX;
+
+        return converterX.from_bytes(rhs);
+    }
+
+    
+    inline void makelower(std::string& rhs) { std::transform(rhs.begin(), rhs.end(), rhs.begin(), [](unsigned char c) { return (unsigned char) std::tolower(c); }); }
+    inline void makelower(std::wstring& rhs) { std::transform(rhs.begin(), rhs.end(), rhs.begin(), [](wchar_t c) { return (wchar_t) std::tolower(c); }); }
+
+    inline void makeupper(std::string& rhs) { std::transform(rhs.begin(), rhs.end(), rhs.begin(), [](unsigned char c) { return (unsigned char) std::toupper(c); }); }
+    inline void makeupper(std::wstring& rhs) { std::transform(rhs.begin(), rhs.end(), rhs.begin(), [](wchar_t c) { return (wchar_t) std::toupper(c); }); }
+
+
+    
+    
+
+
+
 
 
     //////////////////////////////////////////////////////////////////////////////////////////////
@@ -141,7 +167,7 @@ namespace StringHelpers
 
 		return sReturn;
 	}
-
+    
 
     //////////////////////////////////////////////////////////////////////////////////////////////
     // Readable byte sizes

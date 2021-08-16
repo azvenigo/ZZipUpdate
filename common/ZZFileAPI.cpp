@@ -13,6 +13,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/bind.hpp>
 #include <mutex>
+#include "StringHelpers.h"
 
 using namespace std;
 using namespace boost::asio;
@@ -51,7 +52,8 @@ bool cZZFile::Open(const string& sURL, bool bWrite, shared_ptr<cZZFile>& pFile, 
 
 bool cZZFile::Open(const wstring& sURL, bool bWrite, shared_ptr<cZZFile>& pFile, bool bVerbose)
 {
-    return Open(string(sURL.begin(), sURL.end()), bWrite, pFile, bVerbose);
+//    return Open(string(sURL.begin(), sURL.end()), bWrite, pFile, bVerbose);
+    return Open(StringHelpers::wstring_to_string(sURL), bWrite, pFile, bVerbose);
 }
 
 
@@ -208,20 +210,20 @@ bool cHTTPFile::OpenInternal(string sURL, bool bWrite, bool bVerbose)       // t
     while (nAttemptsLeft-- > 0)
     {
         // Strip URL tag if necessary (redirect URL may return http)
-        string sURL(msURL);
-        if (sURL.substr(0, kHTTPSTag.length()) == kHTTPSTag)
+        string sStrippedURL(msURL);
+        if (sStrippedURL.substr(0, kHTTPSTag.length()) == kHTTPSTag)
         {
             mbHTTPSConnection = true;
-            sURL = sURL.substr(kHTTPSTag.length());		// strip off the "https://"
+            sStrippedURL = sStrippedURL.substr(kHTTPSTag.length());		// strip off the "https://"
         }
-        else if (sURL.substr(0, kHTTPTag.length()) == kHTTPTag)
+        else if (sStrippedURL.substr(0, kHTTPTag.length()) == kHTTPTag)
         {
             mbHTTPSConnection = false;
-            sURL = sURL.substr(kHTTPTag.length());		// strip off the "http://"
+            sStrippedURL = sStrippedURL.substr(kHTTPTag.length());		// strip off the "http://"
         }
 
-        msHost = sURL.substr(0, sURL.find_first_of("/"));
-        msPath = sURL.substr(msHost.length());
+        msHost = sStrippedURL.substr(0, sStrippedURL.find_first_of("/"));
+        msPath = sStrippedURL.substr(msHost.length());
 
         // Resolve the domain name
         tcp::resolver resolver(mIOService);
@@ -702,7 +704,7 @@ bool cHTTPResponseHeaders::Parse(std::istream& response_stream, bool bVerbose)
             }
             else
             {
-                mNameToValueMap[sHeader] == ""; // create map entry for header name with empty string
+                mNameToValueMap[sHeader] = ""; // create map entry for header name with empty string
             }
 		}
 

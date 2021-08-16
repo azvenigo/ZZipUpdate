@@ -16,8 +16,8 @@
     <Filter Include="Helpers">
       <UniqueIdentifier>{e183ad2c-bee7-44a2-9dac-da9bec425ff5}</UniqueIdentifier>
     </Filter>
-    <Filter Include="zlib">
-      <UniqueIdentifier>{0ab89fa2-c173-4ba5-8894-99a9b188cf2e}</UniqueIdentifier>
+    <Filter Include="zlib-1.2.11">
+      <UniqueIdentifier>{6d531bab-0257-460a-a15c-dd2867281dee}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -42,59 +42,59 @@
     <ClCompile Include="..\common\FNMatch.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
-    <ClCompile Include="..\common\zlib-1.2.8\adler32.c">
-      <Filter>zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\zlib-1.2.8\compress.c">
-      <Filter>zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\zlib-1.2.8\deflate.c">
-      <Filter>zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\zlib-1.2.8\gzclose.c">
-      <Filter>zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\zlib-1.2.8\gzlib.c">
-      <Filter>zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\zlib-1.2.8\gzread.c">
-      <Filter>zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\zlib-1.2.8\gzwrite.c">
-      <Filter>zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\zlib-1.2.8\infback.c">
-      <Filter>zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\zlib-1.2.8\inffast.c">
-      <Filter>zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\zlib-1.2.8\inflate.c">
-      <Filter>zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\zlib-1.2.8\inftrees.c">
-      <Filter>zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\zlib-1.2.8\trees.c">
-      <Filter>zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\zlib-1.2.8\uncompr.c">
-      <Filter>zlib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\zlib-1.2.8\zutil.c">
-      <Filter>zlib</Filter>
-    </ClCompile>
     <ClCompile Include="..\common\ZZFileAPI.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
     <ClCompile Include="..\common\Crc32Fast.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
-    <ClCompile Include="..\common\zlib-1.2.8\crc32.c">
-      <Filter>zlib</Filter>
-    </ClCompile>
     <ClCompile Include="..\common\HTTPCache.cpp">
       <Filter>Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\zlib-1.2.11\adler32.c">
+      <Filter>zlib-1.2.11</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\zlib-1.2.11\compress.c">
+      <Filter>zlib-1.2.11</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\zlib-1.2.11\crc32.c">
+      <Filter>zlib-1.2.11</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\zlib-1.2.11\deflate.c">
+      <Filter>zlib-1.2.11</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\zlib-1.2.11\gzread.c">
+      <Filter>zlib-1.2.11</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\zlib-1.2.11\gzwrite.c">
+      <Filter>zlib-1.2.11</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\zlib-1.2.11\infback.c">
+      <Filter>zlib-1.2.11</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\zlib-1.2.11\inffast.c">
+      <Filter>zlib-1.2.11</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\zlib-1.2.11\inflate.c">
+      <Filter>zlib-1.2.11</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\zlib-1.2.11\inftrees.c">
+      <Filter>zlib-1.2.11</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\zlib-1.2.11\gzclose.c">
+      <Filter>zlib-1.2.11</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\zlib-1.2.11\gzlib.c">
+      <Filter>zlib-1.2.11</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\zlib-1.2.11\uncompr.c">
+      <Filter>zlib-1.2.11</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\zlib-1.2.11\zutil.c">
+      <Filter>zlib-1.2.11</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\zlib-1.2.11\trees.c">
+      <Filter>zlib-1.2.11</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -119,33 +119,6 @@
     <ClInclude Include="..\ZZip\ZipJob.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\common\zlib-1.2.8\deflate.h">
-      <Filter>zlib</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\zlib-1.2.8\gzguts.h">
-      <Filter>zlib</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\zlib-1.2.8\inffast.h">
-      <Filter>zlib</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\zlib-1.2.8\inffixed.h">
-      <Filter>zlib</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\zlib-1.2.8\inflate.h">
-      <Filter>zlib</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\zlib-1.2.8\inftrees.h">
-      <Filter>zlib</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\zlib-1.2.8\trees.h">
-      <Filter>zlib</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\zlib-1.2.8\zconf.h">
-      <Filter>zlib</Filter>
-    </ClInclude>
-    <ClInclude Include="..\common\zlib-1.2.8\zutil.h">
-      <Filter>zlib</Filter>
-    </ClInclude>
     <ClInclude Include="..\common\ZZFileAPI.h">
       <Filter>Helpers</Filter>
     </ClInclude>
@@ -157,6 +130,33 @@
     </ClInclude>
     <ClInclude Include="..\common\HTTPCache.h">
       <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\zlib-1.2.11\deflate.h">
+      <Filter>zlib-1.2.11</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\zlib-1.2.11\inffast.h">
+      <Filter>zlib-1.2.11</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\zlib-1.2.11\inffixed.h">
+      <Filter>zlib-1.2.11</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\zlib-1.2.11\inflate.h">
+      <Filter>zlib-1.2.11</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\zlib-1.2.11\inftrees.h">
+      <Filter>zlib-1.2.11</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\zlib-1.2.11\gzguts.h">
+      <Filter>zlib-1.2.11</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\zlib-1.2.11\trees.h">
+      <Filter>zlib-1.2.11</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\zlib-1.2.11\zconf.h">
+      <Filter>zlib-1.2.11</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\zlib-1.2.11\zutil.h">
+      <Filter>zlib-1.2.11</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -126,8 +126,11 @@ copy $(ProjectDir)..\common\openssl\openssl-32\openssl\libssl-1_1.dll $(OutputPa
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_WIN32_WINNT=0x0601;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_WIN32_WINNT=0x0601;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(SolutionDir)..\;$(SolutionDir)..\common\boost_1_70_0\;$(SolutionDir)..\ZZip\;$(SolutionDir)..\common\openssl\openssl-64\openssl\include\;$(SolutionDir)..\common\zlib-1.2.8\</AdditionalIncludeDirectories>
+      <UndefinePreprocessorDefinitions>
+      </UndefinePreprocessorDefinitions>
+      <LanguageStandard>stdcpp14</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -174,8 +177,11 @@ copy $(ProjectDir)..\common\openssl\openssl-32\openssl\libssl-1_1.dll $(OutputPa
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>_WIN32_WINNT=0x0601;WIN64;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_WIN32_WINNT=0x0601;WIN64;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(SolutionDir)..\;$(SolutionDir)..\common\boost_1_70_0\;$(SolutionDir)..\ZZip\;$(SolutionDir)..\common\openssl\openssl-64\openssl\include\;$(SolutionDir)..\common\zlib-1.2.8\</AdditionalIncludeDirectories>
+      <UndefinePreprocessorDefinitions>
+      </UndefinePreprocessorDefinitions>
+      <LanguageStandard>stdcpp14</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -194,21 +200,21 @@ copy $(ProjectDir)..\common\openssl\openssl-64\openssl\libssl-1_1-x64.dll $(Outp
     <ClCompile Include="..\common\FNMatch.cpp" />
     <ClCompile Include="..\common\HTTPCache.cpp" />
     <ClCompile Include="..\common\StringHelpers.cpp" />
-    <ClCompile Include="..\common\zlib-1.2.8\adler32.c" />
-    <ClCompile Include="..\common\zlib-1.2.8\compress.c" />
-    <ClCompile Include="..\common\zlib-1.2.8\crc32.c" />
-    <ClCompile Include="..\common\zlib-1.2.8\deflate.c" />
-    <ClCompile Include="..\common\zlib-1.2.8\gzclose.c" />
-    <ClCompile Include="..\common\zlib-1.2.8\gzlib.c" />
-    <ClCompile Include="..\common\zlib-1.2.8\gzread.c" />
-    <ClCompile Include="..\common\zlib-1.2.8\gzwrite.c" />
-    <ClCompile Include="..\common\zlib-1.2.8\infback.c" />
-    <ClCompile Include="..\common\zlib-1.2.8\inffast.c" />
-    <ClCompile Include="..\common\zlib-1.2.8\inflate.c" />
-    <ClCompile Include="..\common\zlib-1.2.8\inftrees.c" />
-    <ClCompile Include="..\common\zlib-1.2.8\trees.c" />
-    <ClCompile Include="..\common\zlib-1.2.8\uncompr.c" />
-    <ClCompile Include="..\common\zlib-1.2.8\zutil.c" />
+    <ClCompile Include="..\common\zlib-1.2.11\adler32.c" />
+    <ClCompile Include="..\common\zlib-1.2.11\compress.c" />
+    <ClCompile Include="..\common\zlib-1.2.11\crc32.c" />
+    <ClCompile Include="..\common\zlib-1.2.11\deflate.c" />
+    <ClCompile Include="..\common\zlib-1.2.11\gzclose.c" />
+    <ClCompile Include="..\common\zlib-1.2.11\gzlib.c" />
+    <ClCompile Include="..\common\zlib-1.2.11\gzread.c" />
+    <ClCompile Include="..\common\zlib-1.2.11\gzwrite.c" />
+    <ClCompile Include="..\common\zlib-1.2.11\infback.c" />
+    <ClCompile Include="..\common\zlib-1.2.11\inffast.c" />
+    <ClCompile Include="..\common\zlib-1.2.11\inflate.c" />
+    <ClCompile Include="..\common\zlib-1.2.11\inftrees.c" />
+    <ClCompile Include="..\common\zlib-1.2.11\trees.c" />
+    <ClCompile Include="..\common\zlib-1.2.11\uncompr.c" />
+    <ClCompile Include="..\common\zlib-1.2.11\zutil.c" />
     <ClCompile Include="..\common\ZZFileAPI.cpp" />
     <ClCompile Include="..\ZZip\ZipHeaders.cpp" />
     <ClCompile Include="..\ZZip\ZipJob.cpp" />
@@ -222,15 +228,15 @@ copy $(ProjectDir)..\common\openssl\openssl-64\openssl\libssl-1_1-x64.dll $(Outp
     <ClInclude Include="..\common\HTTPCache.h" />
     <ClInclude Include="..\common\StringHelpers.h" />
     <ClInclude Include="..\common\thread_pool.hpp" />
-    <ClInclude Include="..\common\zlib-1.2.8\deflate.h" />
-    <ClInclude Include="..\common\zlib-1.2.8\gzguts.h" />
-    <ClInclude Include="..\common\zlib-1.2.8\inffast.h" />
-    <ClInclude Include="..\common\zlib-1.2.8\inffixed.h" />
-    <ClInclude Include="..\common\zlib-1.2.8\inflate.h" />
-    <ClInclude Include="..\common\zlib-1.2.8\inftrees.h" />
-    <ClInclude Include="..\common\zlib-1.2.8\trees.h" />
-    <ClInclude Include="..\common\zlib-1.2.8\zconf.h" />
-    <ClInclude Include="..\common\zlib-1.2.8\zutil.h" />
+    <ClInclude Include="..\common\zlib-1.2.11\deflate.h" />
+    <ClInclude Include="..\common\zlib-1.2.11\gzguts.h" />
+    <ClInclude Include="..\common\zlib-1.2.11\inffast.h" />
+    <ClInclude Include="..\common\zlib-1.2.11\inffixed.h" />
+    <ClInclude Include="..\common\zlib-1.2.11\inflate.h" />
+    <ClInclude Include="..\common\zlib-1.2.11\inftrees.h" />
+    <ClInclude Include="..\common\zlib-1.2.11\trees.h" />
+    <ClInclude Include="..\common\zlib-1.2.11\zconf.h" />
+    <ClInclude Include="..\common\zlib-1.2.11\zutil.h" />
     <ClInclude Include="..\common\ZZFileAPI.h" />
     <ClInclude Include="..\ZZip\ZipHeaders.h" />
     <ClInclude Include="..\ZZip\ZipJob.h" />
