@@ -28,7 +28,7 @@ public:
     };
 
     DecompressTaskResult() : mDecompressTaskStatus(kNone), mOSErrorCode(0), mBytesDownloaded(0), mBytesWrittenToDisk(0), mRetriesRemaining(0) {}
-    DecompressTaskResult(eDecompressTaskStatus nStatus, uint32_t nOSErrorCode, uint64_t nBytesDownloaded, uint64_t nBytesWrittenToDisk, int32_t retriesRemaining, const string& fileName, const string& result) :
+    DecompressTaskResult(eDecompressTaskStatus nStatus, uint32_t nOSErrorCode, uint64_t nBytesDownloaded, uint64_t nBytesWrittenToDisk, int32_t retriesRemaining, const std::string& fileName, const std::string& result) :
         mDecompressTaskStatus(nStatus),
         mOSErrorCode(nOSErrorCode),
         mBytesDownloaded(nBytesDownloaded),
@@ -37,7 +37,7 @@ public:
         mFilename(fileName),
         mResult(result) {}
 
-    friend ostream& operator << (ostream& os, const eDecompressTaskStatus& status)
+    friend std::ostream& operator << (std::ostream& os, const eDecompressTaskStatus& status)
     {
         switch (status)
         {
@@ -51,15 +51,15 @@ public:
         return os;
     }
 
-    friend ostream& operator << (ostream& os, const DecompressTaskResult& result) { os << "Filename:" << result.mFilename << " Status:" << result.mDecompressTaskStatus << " OSError:" << result.mOSErrorCode << " mBytesDownloaded:" << result.mBytesDownloaded << " mBytesWrittenToDisk:" << result.mBytesWrittenToDisk << " mRetriesRemaining:" << result.mRetriesRemaining << " Result:" << result.mResult;  return os; }
+    friend std::ostream& operator << (std::ostream& os, const DecompressTaskResult& result) { os << "Filename:" << result.mFilename << " Status:" << result.mDecompressTaskStatus << " OSError:" << result.mOSErrorCode << " mBytesDownloaded:" << result.mBytesDownloaded << " mBytesWrittenToDisk:" << result.mBytesWrittenToDisk << " mRetriesRemaining:" << result.mRetriesRemaining << " Result:" << result.mResult;  return os; }
 
     eDecompressTaskStatus   mDecompressTaskStatus;
     uint32_t                mOSErrorCode;
     uint64_t                mBytesDownloaded;
     uint64_t                mBytesWrittenToDisk;
     int32_t                 mRetriesRemaining;
-    string                  mFilename;
-    string                  mResult;
+    std::string                  mFilename;
+    std::string                  mResult;
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -82,12 +82,12 @@ public:
     };
 
     DiffTaskResult() : mDiffTaskStatus(kNone), mnSize(0) {}
-    DiffTaskResult(eDiffTaskStatus nStatus, uint64_t nSize, const string& fileName) :
+    DiffTaskResult(eDiffTaskStatus nStatus, uint64_t nSize, const std::string& fileName) :
         mDiffTaskStatus(nStatus),
         mnSize(nSize),
         mFilename(fileName) {}
 
-    friend ostream& operator << (ostream& os, const eDiffTaskStatus& status)
+    friend std::ostream& operator << (std::ostream& os, const eDiffTaskStatus& status)
     {
         switch (status)
         {
@@ -104,11 +104,11 @@ public:
         return os;
     }
 
-    friend ostream& operator << (ostream& os, const DiffTaskResult& result) { os << "FileName:" << result.mFilename << " Status:" << result.mDiffTaskStatus; return os; }
+    friend std::ostream& operator << (std::ostream& os, const DiffTaskResult& result) { os << "FileName:" << result.mFilename << " Status:" << result.mDiffTaskStatus; return os; }
 
     eDiffTaskStatus mDiffTaskStatus;
     uint64_t        mnSize;
-    string          mFilename;
+    std::string          mFilename;
 
 };
 
@@ -195,7 +195,7 @@ public:
         return 0;
     }
 
-    chrono::time_point<std::chrono::system_clock>   mStart;       // for time tracking
+    std::chrono::time_point<std::chrono::system_clock>   mStart;       // for time tracking
     std::atomic<uint64_t>                           mnBytesProcessed;
     std::atomic<uint64_t>                           mnBytesToProcess;
 };
@@ -225,7 +225,7 @@ public:
 
     JobStatus() : mStatus(kNone), mErrorCode(0) {}
 
-    JobStatus(eJobStatus status, int32_t errorCode, wstring sErrorMessage) : mStatus(status), mErrorCode(errorCode), msErrorMessage(sErrorMessage) {}
+    JobStatus(eJobStatus status, int32_t errorCode, std::string sErrorMessage) : mStatus(status), mErrorCode(errorCode), msErrorMessage(sErrorMessage) {}
 
     JobStatus(const JobStatus& rhs)
     {
@@ -235,7 +235,7 @@ public:
     }
 
 
-    friend ostream& operator << (ostream& os, const JobStatus& jobStatus)
+    friend std::ostream& operator << (std::ostream& os, const JobStatus& jobStatus)
     {
         os << "Status:";
         switch (jobStatus.mStatus)
@@ -246,14 +246,14 @@ public:
         }
 
         if (jobStatus.mStatus == kError)
-            os << "Error Code:" << jobStatus.mErrorCode << " - " << wstring_to_string(jobStatus.msErrorMessage).c_str();
+            os << "Error Code:" << jobStatus.mErrorCode << " - " << jobStatus.msErrorMessage.c_str();
 
         return os;
 
     };
 
 
-    void SetError(int32_t osErrorCode, wstring sErrorMessage = L"")
+    void SetError(int32_t osErrorCode, std::string sErrorMessage = "")
     {
         mStatus = kError;
         mErrorCode = osErrorCode;
@@ -262,7 +262,7 @@ public:
 
     eJobStatus      mStatus;
     int32_t         mErrorCode;
-    wstring         msErrorMessage;
+    std::string         msErrorMessage;
 };
 
 

@@ -20,14 +20,17 @@
 #pragma once
 
 #include <string>
-#include <boost/asio.hpp>
-#include <boost/asio/ssl.hpp>
 #include <fstream>
 #include <atomic>
 #include <mutex>
 #include "HTTPCache.h"
+#include "curl/curl.h"
 
-using namespace std;
+inline int64_t GetUSSinceEpoch()
+{
+    return std::chrono::system_clock::now().time_since_epoch() / std::chrono::microseconds(1);
+}
+
 
 // Interface class
 class cZZFile
@@ -42,8 +45,8 @@ public:
 
     // Factory Construction
     // returns either a cZZFileLocal, cHTTPFile* or a cHTTPSFile* depending on the url needs
-    static bool         Open(const string& sURL, bool bWrite, shared_ptr<cZZFile>& pFile, bool bVerbose = false);
-    static bool         Open(const wstring& sURL, bool bWrite, shared_ptr<cZZFile>& pFile, bool bVerbose = false);	    // wstring version for convenience
+    static bool         Open(const std::string& sURL, bool bWrite, std::shared_ptr<cZZFile>& pFile, const std::string& sName = "", const std::string& sPassword = "", bool bVerbose = false);
+    static bool         Open(const std::wstring& sURL, bool bWrite, std::shared_ptr<cZZFile>& pFile, const std::wstring& sName = L"", const std::wstring& sPassword = L"", bool bVerbose = false);	    // wstring version for convenience
 
     virtual             ~cZZFile() {};
 
@@ -57,8 +60,8 @@ public:
 protected:
     cZZFile();          // private constructor.... use cZZFile::Open factory function for construction
 
-    virtual bool	    OpenInternal(string sURL, bool bWrite, bool bVerbose) = 0;
-    string			    msPath;
+    virtual bool	    OpenInternal(std::string sURL, bool bWrite, std::string sName, std::string sPassword, bool bVerbose) = 0;
+    std::string         msPath;
     bool                mbVerbose;
     uint64_t		    mnFileSize;
     int64_t             mnLastError;
@@ -79,41 +82,14 @@ public:
 protected:
     cZZFileLocal(); // private constructor.... use cZZFile::Open factory function for construction
 
-    virtual bool    OpenInternal(string sURL, bool bWrite, bool bVerbose);
+    virtual bool    OpenInternal(std::string sURL, bool bWrite, std::string sName, std::string sPassword, bool bVerbose);
 
 protected:
-	fstream         mFileStream;
-	mutex           mMutex;
+    std::fstream    mFileStream;
+    std::mutex      mMutex;
 };
 
 
-
-
-//////////////////////////////////////////////////////////////////////////////////////////
-class cHTTPResponseHeaders
-{
-public:
-
-    cHTTPResponseHeaders();
-
-    void Reset();
-
-    bool Parse(std::istream& response_stream, bool bVerbose = false);
-
-    bool GetString(const string& sNameIn, string& sValueOut);
-    bool GetInt(const string& sNameIn, int64_t& nValueOut);
-    bool Contains(const string& sNameIn);
-
-    string      msHTTPVersion;
-    uint32_t    mnHTTPStatusCode;
-    string      msStatus;
-
-private:
-    bool ParseHeaders(list<std::string>& headersList);
-
-    map<string, string> mNameToValueMap;
-
-};
 
 //////////////////////////////////////////////////////////////////////////////////////////
 class cHTTPFile : public cZZFile
@@ -129,20 +105,21 @@ public:
 protected:
     cHTTPFile();    // private constructor.... use cZZFile::Open factory function for construction
 
-    virtual bool	OpenInternal(string sURL, bool bWrite, bool bVerbose);
-    bool            ReadInternal(int64_t nOffset, uint32_t nBytes, uint8_t* pDestination, uint32_t& nBytesRead);
-    bool            ReadInternalSSL(int64_t nOffset, uint32_t nBytes, uint8_t* pDestination, uint32_t& nBytesRead);
+    virtual bool	OpenInternal(std::string sURL, bool bWrite, std::string sName, std::string sPassword, bool bVerbose);
 
-    string                              msURL;
-    string                              msHost;
+    static size_t   write_data(char* buffer, size_t size, size_t nitems, void* userp);
 
-    boost::asio::io_service             mIOService;
-    cHTTPResponseHeaders                mConnectionResponseHeaders;
+    static void     lock_cb(CURL* handle, curl_lock_data data, curl_lock_access access, void* userp);
+    static void     unlock_cb(CURL* handle, curl_lock_data data, void* userp);
 
-    // HTTPS related
-    bool                                mbHTTPSConnection;
-    atomic <boost::asio::ssl::context*> mpSSLContext;
+    std::string     msURL;
+    std::string     msHost;
 
-    HTTPCache                           mCache;
+    // Auth
+    std::string     msName;
+    std::string     msPassword;
 
+    HTTPCache       mCache;
+    CURLSH*         mpCurlShare;
+    std::mutex      mCurlMutex;
 };

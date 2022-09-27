@@ -15,39 +15,52 @@
 #include <filesystem>
 #include <time.h>
 #include <ctime>
-#include <boost/lexical_cast.hpp>
+#include <chrono>
+//#include <boost/lexical_cast.hpp>
 #include "common/CrC32Fast.h"
 
 
-uint16_t zip_date_from_std_time(const std::time_t& t)
+using namespace std;
+
+
+/*template <typename TP>
+std::time_t to_time_t(TP tp)
+{
+    using namespace std::chrono;
+    auto sctp = time_point_cast<system_clock::duration>(tp - TP::clock::now()
+        + system_clock::now());
+    return system_clock::to_time_t(sctp);
+}*/
+
+uint16_t zip_date_from_std_time(time_t& tt)
 {
     // format
     // Bits 00 - 04: day
     // Bits 05 - 08: month
     // Bits 09-15: years from 1980
 
-    struct tm now;
-    localtime_s(&now, &t);
-    uint16_t nDay = (uint16_t)now.tm_mday;
-    uint16_t nMonth = (uint16_t)now.tm_mon;
-    uint16_t nYear = (uint16_t)now.tm_year;
+    tm* now = localtime(&tt);
+
+
+    uint16_t nDay = (uint16_t)now->tm_mday;
+    uint16_t nMonth = (uint16_t)now->tm_mon;
+    uint16_t nYear = (uint16_t)now->tm_year;
 
     return nDay | nMonth << 5 | nYear << 9;
 }
 
-uint16_t zip_time_from_std_time(const std::time_t& t)
+uint16_t zip_time_from_std_time(time_t& tt)
 {
     // format
     // Bits 00 - 04: seconds divided by 2
     // Bits 05 - 10 : minute
     // Bits 11 - 15 : hour
 
-    struct tm now;
-    localtime_s(&now, &t);
+    tm* now = localtime(&tt);
 
-    uint16_t nSecs = (uint16_t)(now.tm_sec / 2);
-    uint16_t nMins = (uint16_t)now.tm_min;
-    uint16_t nHour = (uint16_t)now.tm_hour;
+    uint16_t nSecs = (uint16_t)(now->tm_sec / 2);
+    uint16_t nMins = (uint16_t)now->tm_min;
+    uint16_t nHour = (uint16_t)now->tm_hour;
 
     return nSecs | nMins << 5 | nHour << 11;
 }
@@ -62,17 +75,19 @@ ZZipAPI::~ZZipAPI()
     Shutdown();
 }
 
-bool ZZipAPI::Init(const wstring& sZipURL, eOpenType type, int32_t nCompressionLevel)
+bool ZZipAPI::Init(const string& sZipURL, eOpenType type, int32_t nCompressionLevel, const string& sName, const string& sPassword)
 {
     if (mbInitted)
     {
-        wcout << L"ZZipAPI already open!  Cannot Reinitialize.\n";
+        cout << "ZZipAPI already open!  Cannot Reinitialize.\n";
         return false;
     }
 
 
     mOpenType = type;
     msZipURL = sZipURL;
+    msName = sName;
+    msPassword = sPassword;
     mnCompressionLevel = nCompressionLevel;
 
     if (mOpenType == kZipOpen)
@@ -113,13 +128,13 @@ bool ZZipAPI::Shutdown()
 
 bool ZZipAPI::OpenForReading()
 {
-    if (!cZZFile::Open(msZipURL, cZZFile::ZZFILE_READ, mpZZFile))
+    if (!cZZFile::Open(msZipURL, cZZFile::ZZFILE_READ, mpZZFile, msName, msPassword))
     {
-        cerr << "Couldn't open file for reading: \"" << msZipURL << "\"\n";
+        std::cerr << "Couldn't open file for reading: \"" << msZipURL << "\"\n";
         return false;
     }
 
-    //wcout << "Parsing \"" << msZipURL.c_str() << "\"\n";
+    //cout << "Parsing \"" << msZipURL.c_str() << "\"\n";
 
     mZipCD.Init(*mpZZFile);
 
@@ -139,13 +154,13 @@ bool ZZipAPI::CreateZipFile()
 }
 
 
-void ZZipAPI::DumpReport(const wstring& sOutputFilename)
+void ZZipAPI::DumpReport(const string& sOutputFilename)
 {
     std::fstream outFile;
     outFile.open(sOutputFilename, ios_base::out | ios_base::trunc);
     if (outFile.fail())
     {
-        wcout << "Failed to open " << sOutputFilename.c_str() << " for report.\n";
+        cout << "Failed to open " << sOutputFilename.c_str() << " for report.\n";
         return;
     }
     outFile << "<html><body>";
@@ -193,7 +208,7 @@ void ZZipAPI::DumpReport(const wstring& sOutputFilename)
         outFile << "</table>";
     }
 
-    mZipCD.DumpCD(outFile, L"*", true, eToStringFormat::kHTML);
+    mZipCD.DumpCD(outFile, "*", true, eToStringFormat::kHTML);
 
     outFile << "</html>";
 
@@ -202,13 +217,13 @@ void ZZipAPI::DumpReport(const wstring& sOutputFilename)
 
 
 
-bool ZZipAPI::ExtractRawStream(const wstring& sFilename, const wstring& sOutputFilename, Progress* pProgress)
+bool ZZipAPI::ExtractRawStream(const string& sFilename, const string& sOutputFilename, Progress* pProgress)
 {
     if (!mbInitted)
         return false;
 
     cCDFileHeader cdFileHeader;
-    if (!mZipCD.GetFileHeader(wstring_to_string(sFilename), cdFileHeader))
+    if (!mZipCD.GetFileHeader(sFilename, cdFileHeader))
         return false;
 
     cLocalFileHeader localFileHeader;
@@ -220,14 +235,14 @@ bool ZZipAPI::ExtractRawStream(const wstring& sFilename, const wstring& sOutputF
         return false;
     }
 
-    const uint32_t kSize = 1024 * 1024;  // one meg at a time
+    const uint32_t kSize = 16*1024 * 1024;  
     uint8_t* pStream = new uint8_t[kSize];
 
     shared_ptr<cZZFile> pOutFile;
     if (!cZZFile::Open(sOutputFilename, cZZFile::ZZFILE_WRITE, pOutFile))
     {
         delete[] pStream;
-        wcout << "Failed to open " << sOutputFilename.c_str() << " for extraction. Reason: " << pOutFile->GetLastError() << "\n";
+        cout << "Failed to open " << sOutputFilename.c_str() << " for extraction. Reason: " << pOutFile->GetLastError() << "\n";
         return false;
     }
 
@@ -265,18 +280,18 @@ bool ZZipAPI::ExtractRawStream(const wstring& sFilename, const wstring& sOutputF
 
     delete[] pStream;
 
-    //wcout << "Extracted \"" << sFilename.c_str() << "\" to \"" << sOutputFilename.c_str() << "\"\n";
+    //cout << "Extracted \"" << sFilename.c_str() << "\" to \"" << sOutputFilename.c_str() << "\"\n";
 
     return true;
 }
 
-bool ZZipAPI::DecompressToFile(const wstring& sFilename, const wstring& sOutputFilename, Progress* pProgress)
+bool ZZipAPI::DecompressToFile(const string& sFilename, const string& sOutputFilename, Progress* pProgress)
 {
     if (!mbInitted)
         return false;
 
     cCDFileHeader cdFileHeader;
-    if (!mZipCD.GetFileHeader(wstring_to_string(sFilename), cdFileHeader))
+    if (!mZipCD.GetFileHeader(sFilename, cdFileHeader))
         return false;
 
     cLocalFileHeader localFileHeader;
@@ -310,7 +325,7 @@ bool ZZipAPI::DecompressToFile(const wstring& sFilename, const wstring& sOutputF
     if (!cZZFile::Open(sOutputFilename, cZZFile::ZZFILE_WRITE, pOutFile))
     {
         delete[] pCompStream;
-        wcout << "Failed to open " << sOutputFilename.c_str() << " for extraction. Reason: " << errno << "\n";
+        cout << "Failed to open " << sOutputFilename.c_str() << " for extraction. Reason: " << errno << "\n";
         return false;
     }
 
@@ -375,38 +390,48 @@ bool ZZipAPI::DecompressToFile(const wstring& sFilename, const wstring& sOutputF
 
     delete[] pCompStream;
 
-    //wcout << "thread: " << this_thread::get_id() << " Extracted \"" << sFilename.c_str() << "\" to \"" << sOutputFilename.c_str() << "\"\n";
+    //cout << "thread: " << this_thread::get_id() << " Extracted \"" << sFilename.c_str() << "\" to \"" << sOutputFilename.c_str() << "\"\n";
 
     return true;
 }
 
+template <typename TP>
+std::time_t to_time_t(TP tp)
+{
+    using namespace std::chrono;
+    auto sctp = time_point_cast<system_clock::duration>(tp - TP::clock::now()
+        + system_clock::now());
+    return system_clock::to_time_t(sctp);
+}
 
-bool ZZipAPI::AddToZipFile(const wstring& sFilename, const wstring& sBaseFolder, Progress* pProgress)
+
+
+bool ZZipAPI::AddToZipFile(const string& sFilename, const string& sBaseFolder, Progress* pProgress)
 {
     // Precondition:  mZipFile seek offset should be set to where the new file should be added.
 
     if (!mbInitted)
     {
-        wcout << "AddToZipFile - Not Initialized!\n";
+        cout << "AddToZipFile - Not Initialized!\n";
         return false;
     }
 
     if (mOpenType != kZipCreate)
     {
-        wcout << "AddToZipFile - ZZipAPI not open for creation!\n";
+        cout << "AddToZipFile - ZZipAPI not open for creation!\n";
         return false;
     }
 
-    bool bInputIsFile = is_regular_file(sFilename);
+    bool bInputIsFile = filesystem::is_regular_file(sFilename);
 
-    wstring sFileOrFolder(sFilename);
+    string sFileOrFolder(sFilename);
     std::replace(sFileOrFolder.begin(), sFileOrFolder.end(), '\\', '/');    // Only forward slashes
 
     if (!bInputIsFile)
     {
         // If this is a folder and it doesn't end in '/' then append it
         if (sFileOrFolder[sFileOrFolder.length() - 1] != '/')
-            sFileOrFolder.append(L"/");
+            sFileOrFolder.append("/");
     }
 
 
@@ -420,16 +445,20 @@ bool ZZipAPI::AddToZipFile(const wstring& sFilename, const wstring& sBaseFolder,
     {
         if (!cZZFile::Open(sFileOrFolder, cZZFile::ZZFILE_READ, pInFile))
         {
-            wcout << "Failed to open " << sFileOrFolder.c_str() << " for compression. Reason: " << pInFile->GetLastError() << "\n";
+            cout << "Failed to open " << sFileOrFolder.c_str() << " for compression. Reason: " << pInFile->GetLastError() << "\n";
             return false;
         }
 
         newLocalHeader.mUncompressedSize = pInFile->GetFileSize();
 
         // Date and Time
-        std::time_t fileTime = last_write_time(sFileOrFolder);
-        newLocalHeader.mLastModificationDate = zip_date_from_std_time(fileTime);
-        newLocalHeader.mLastModificationTime = zip_time_from_std_time(fileTime);
+        filesystem::file_time_type fileTime = filesystem::last_write_time(sFileOrFolder);
+
+
+        time_t tt = to_time_t(fileTime);
+
+        newLocalHeader.mLastModificationDate = zip_date_from_std_time(tt);
+        newLocalHeader.mLastModificationTime = zip_time_from_std_time(tt);
         if (newLocalHeader.mUncompressedSize > 0) // TBD add uncompressed?
             newLocalHeader.mCompressionMethod = 8;  // only deflate supported. 
     }
@@ -440,7 +469,7 @@ bool ZZipAPI::AddToZipFile(const wstring& sFilename, const wstring& sBaseFolder,
     uint16_t nRelativeLength = (uint16_t)(sFileOrFolder.length() - sBaseFolder.length());
 
     // relative path
-    newLocalHeader.mFilename = wstring_to_string(sFileOrFolder.substr(sFileOrFolder.length() - nRelativeLength, nRelativeLength));
+    newLocalHeader.mFilename = sFileOrFolder.substr(sFileOrFolder.length() - nRelativeLength, nRelativeLength);
     newLocalHeader.mFilenameLength = nRelativeLength;
 
 
@@ -543,24 +572,24 @@ bool ZZipAPI::AddToZipFile(const wstring& sFilename, const wstring& sBaseFolder,
 
     mZipCD.mCDFileHeaderList.push_back(newCDFileHeader);
 
-    //    wcout << "thread: " << this_thread::get_id() << " Added \"" << sFileOrFolder.c_str() << "\"\n";
+    //    cout << "thread: " << this_thread::get_id() << " Added \"" << sFileOrFolder.c_str() << "\"\n";
 
     return true;
 }
 
-bool ZZipAPI::AddToZipFileFromBuffer(uint8_t* pInputBuffer, uint32_t nInputBufferSize, const wstring& sFilename, Progress* pProgress)
+bool ZZipAPI::AddToZipFileFromBuffer(uint8_t* pInputBuffer, uint32_t nInputBufferSize, const string& sFilename, Progress* pProgress)
 {
     // Precondition:  mZipFile seek offset should be set to where the new file should be added.
 
     if (!mbInitted)
     {
-        wcout << "AddToZipFile - Not Initialized!\n";
+        cout << "AddToZipFile - Not Initialized!\n";
         return false;
     }
 
     if (mOpenType != kZipCreate)
     {
-        wcout << "AddToZipFile - ZZipAPI not open for creation!\n";
+        cout << "AddToZipFile - ZZipAPI not open for creation!\n";
         return false;
     }
 
@@ -573,15 +602,19 @@ bool ZZipAPI::AddToZipFileFromBuffer(uint8_t* pInputBuffer, uint32_t nInputBuffe
 
     // Date and Time
     std::time_t fileTime = std::time(NULL);
-    newLocalHeader.mLastModificationDate = zip_date_from_std_time(fileTime);
-    newLocalHeader.mLastModificationTime = zip_time_from_std_time(fileTime);
+    const std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
+  
+    time_t tt = to_time_t(now);
+
+    newLocalHeader.mLastModificationDate = zip_date_from_std_time(tt);
+    newLocalHeader.mLastModificationTime = zip_time_from_std_time(tt);
     newLocalHeader.mCompressionMethod = 8;  // only deflate supported. 
 
     newLocalHeader.mMinVersionToExtract = kDefaultMinVersionToExtract;
     newLocalHeader.mGeneralPurposeBitFlag = kDefaultGeneralPurposeFlag;
 
     // relative path
-    newLocalHeader.mFilename = wstring_to_string(sFilename);
+    newLocalHeader.mFilename = sFilename;
     newLocalHeader.mFilenameLength = (uint16_t)sFilename.length();
 
 
@@ -656,7 +689,7 @@ bool ZZipAPI::AddToZipFileFromBuffer(uint8_t* pInputBuffer, uint32_t nInputBuffe
 }
 
 
-bool ZZipAPI::DecompressToFolder(const wstring& sPattern, const wstring& sOutputFolder, Progress* pProgress)
+bool ZZipAPI::DecompressToFolder(const string& sPattern, const string& sOutputFolder, Progress* pProgress)
 {
     uint64_t nFilesDecompressed = 0;
     uint64_t nFoldersCreated = 0;
@@ -675,22 +708,22 @@ bool ZZipAPI::DecompressToFolder(const wstring& sPattern, const wstring& sOutput
     {
         cCDFileHeader& cdFileHeader = *it;
 
-        if (FNMatch(sPattern, string_to_wstring(cdFileHeader.mFileName).c_str()))
+        if (FNMatch(sPattern, cdFileHeader.mFileName.c_str()))
         {
             //            wcout << "Pattern: \"" << sPattern.c_str() << "\" File: \"" << cdFileHeader.mFileName.c_str() << "\" matches. \n";
 
-            boost::filesystem::path fullPath(sOutputFolder);
+            std::filesystem::path fullPath(sOutputFolder);
             fullPath.append(cdFileHeader.mFileName);
 
             // Ensure folder exists
 
             // decompress
-            if (!is_directory(fullPath.branch_path()))
+            if (!std::filesystem::is_directory(fullPath.parent_path()))
             {
                 //                wcout << "Creating Path: \"" << fullPath.branch_path().c_str() << "\"\n";
-                if (!boost::filesystem::create_directories(fullPath.branch_path()))
+                if (!std::filesystem::create_directories(fullPath.parent_path()))
                 {
-                    wcout << "Failed to create path! :" << fullPath.branch_path() << "\n";
+                    wcout << "Failed to create path! :" << fullPath.parent_path() << "\n";
                     return false;
                 }
 
@@ -714,10 +747,10 @@ bool ZZipAPI::DecompressToFolder(const wstring& sPattern, const wstring& sOutput
 
     for (auto header : filesToDecompress)
     {
-        boost::filesystem::path fullPath(sOutputFolder);
+        std::filesystem::path fullPath(sOutputFolder);
         fullPath.append(header.mFileName);
 
-        DecompressToFile(string_to_wstring(header.mFileName), fullPath.c_str(), pProgress);
+        DecompressToFile(header.mFileName, fullPath.string(), pProgress);
     }
 
 
@@ -738,13 +771,13 @@ bool ZZipAPI::DecompressToFolder(const wstring& sPattern, const wstring& sOutput
 }
 
 
-bool ZZipAPI::DecompressToBuffer(const wstring& sFilename, uint8_t* pOutputBuffer, Progress* pProgress)
+bool ZZipAPI::DecompressToBuffer(const string& sFilename, uint8_t* pOutputBuffer, Progress* pProgress)
 {
     if (!mbInitted)
         return false;
 
     cCDFileHeader cdFileHeader;
-    if (!mZipCD.GetFileHeader(wstring_to_string(sFilename), cdFileHeader))
+    if (!mZipCD.GetFileHeader(sFilename, cdFileHeader))
         return false;
 
     cLocalFileHeader localFileHeader;

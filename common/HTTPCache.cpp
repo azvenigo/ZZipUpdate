@@ -9,6 +9,10 @@
 
 #include "HTTPCache.h"
 #include <algorithm>
+#include <iostream>
+#include <assert.h>
+
+using namespace std;
 
 atomic<int64_t> gnTotalCacheLinesReserved = 0;
 atomic<int64_t> gnTotalBytesReserved = 0;
@@ -138,7 +142,7 @@ shared_ptr<HTTPCacheLine> HTTPCache::Reserve(int64_t nOffset)
             // haven't encountered this condition yet but may need aa solution
 
             // TBD
-            cout << "Fatal error! Ran out of cache lines!\n";
+            std::cerr << "Fatal error! Ran out of cache lines!\n";
         }
         else
         {

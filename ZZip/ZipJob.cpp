@@ -11,25 +11,15 @@
 #include "ZZipAPI.h"
 #include <iostream>
 #include <iomanip>
-#include <boost/filesystem.hpp>
-#include <boost/date_time.hpp>
+#include <filesystem>
+//#include <boost/filesystem.hpp>
+//#include <boost/date_time.hpp>
 #include "common/CrC32Fast.h"
 #include "common/FNMatch.h"
 #include "common/thread_pool.hpp"
 #include "common/ZZFileAPI.h"
 
 using namespace std;
-
-struct recursive_directory_range
-{
-    typedef recursive_directory_iterator iterator;
-    recursive_directory_range(path p) : p_(p) {}
-
-    iterator begin() { return recursive_directory_iterator(p_); }
-    iterator end() { return recursive_directory_iterator(); }
-
-    path p_;
-};
 
 
 ZipJob::~ZipJob()
@@ -43,7 +33,7 @@ ZipJob::~ZipJob()
     }
 }
 
-void ZipJob::SetBaseFolder(const wstring& sBaseFolder)
+void ZipJob::SetBaseFolder(const string& sBaseFolder)
 {
     if (!sBaseFolder.empty())
     {
@@ -51,7 +41,7 @@ void ZipJob::SetBaseFolder(const wstring& sBaseFolder)
         std::replace(msBaseFolder.begin(), msBaseFolder.end(), '\\', '/');    // Only forward slashes
 
         if (msBaseFolder[msBaseFolder.length() - 1] != '/')
-            msBaseFolder.append(L"/");
+            msBaseFolder.append("/");
     }
 }
 
@@ -90,24 +80,24 @@ void ZipJob::RunCompressionJob(void* pContext)
         return;
     }
 
-    wcout << "Running Compression Job.\n";
-    wcout << "Package: " << pZipJob->msPackageURL << "\n";
-    wcout << "Path:    " << pZipJob->msBaseFolder << "\n";
-    wcout << "Pattern: " << pZipJob->msPattern << "\n";
+    cout << "Running Compression Job.\n";
+    cout << "Package: " << pZipJob->msPackageURL << "\n";
+    cout << "Path:    " << pZipJob->msBaseFolder << "\n";
+    cout << "Pattern: " << pZipJob->msPattern << "\n";
 
 
-    if (!exists(pZipJob->msBaseFolder))
+    if (!std::filesystem::exists(pZipJob->msBaseFolder))
     {
-        pZipJob->mJobStatus.SetError(JobStatus::kError_NotFound, L"Folder \"" + pZipJob->msBaseFolder + L"\" not found!");
-        cerr << "Folder \"" << pZipJob->msBaseFolder << "\" not found!\n";
+        pZipJob->mJobStatus.SetError(JobStatus::kError_NotFound, "Folder \"" + pZipJob->msBaseFolder + "\" not found!");
+        std::cerr << "Folder \"" << pZipJob->msBaseFolder << "\" not found!\n";
         return;
     }
 
     ZZipAPI zipAPI;
     if (!zipAPI.Init(pZipJob->msPackageURL, ZZipAPI::kZipCreate))
     {
-        pZipJob->mJobStatus.SetError(JobStatus::kError_OpenFailed, L"Couldn't create package:\"" + pZipJob->msPackageURL + L"\" for compression Job!");
-        //wcerr << "Couldn't Open " << pZipJob->msPackageURL << " for Decompression Job!" << std::endl;
+        pZipJob->mJobStatus.SetError(JobStatus::kError_OpenFailed, "Couldn't create package:\"" + pZipJob->msPackageURL + "\" for compression Job!");
+        //cerr << "Couldn't Open " << pZipJob->msPackageURL << " for Decompression Job!" << std::endl;
         return;
     }
 
@@ -118,13 +108,14 @@ void ZipJob::RunCompressionJob(void* pContext)
 
     // Compute files to add (so that we have the total size of the job)
     uint64_t nTotalBytes = 0;
-    path compressFolder(pZipJob->msBaseFolder);
-    for (auto it : recursive_directory_range(compressFolder))
+    std::filesystem::path compressFolder(pZipJob->msBaseFolder);
+
+    for (auto it : std::filesystem::recursive_directory_iterator(compressFolder))
     {
         if (pZipJob->mbVerbose)
             cout << "Found:" << it;
 
-        if (FNMatch(wstring_to_string(pZipJob->msPattern), it.path().generic_string().c_str()))
+        if (FNMatch(pZipJob->msPattern, it.path().generic_string().c_str()))
         {
             if (pZipJob->mbVerbose)
                 cout << "...matches.\n";
@@ -154,7 +145,7 @@ void ZipJob::RunCompressionJob(void* pContext)
         return;
     }
 
-    cout << "Found " << filesToCompress.size() << " files.  Total size: " << FormatFriendlyBytes(nTotalBytes, kSizeMB) << " (" << nTotalBytes << " bytes)\n";
+    cout << "Found " << filesToCompress.size() << " files.  Total size: " << FormatFriendlyBytes(nTotalBytes, StringHelpers::kMiB) << " (" << nTotalBytes << " bytes)\n";
     pZipJob->mJobProgress.Reset();
     pZipJob->mJobProgress.AddBytesToProcess(nTotalBytes);
     
@@ -163,7 +154,7 @@ void ZipJob::RunCompressionJob(void* pContext)
     {
         if (pZipJob->mbVerbose)
             cout << "Adding to Zip File: " << fileHeader.mFileName << "\n";
-        zipAPI.AddToZipFile(string_to_wstring(fileHeader.mFileName), pZipJob->msBaseFolder, &pZipJob->mJobProgress);
+        zipAPI.AddToZipFile(fileHeader.mFileName, pZipJob->msBaseFolder, &pZipJob->mJobProgress);
     }
 
     cout << "Finished\n";
@@ -198,7 +189,7 @@ void ZipJob::RunCompressionJob(void* pContext)
     cout << "[--------------------------------------------------------------]\n";
 
     cout << "Total Time Taken:                  " << pZipJob->mJobProgress.GetElapsedTimeMS()/1000 << "s\n";
-    cout << "Compression Speed:                 " << FormatFriendlyBytes(pZipJob->mJobProgress.GetBytesPerSecond(), kSizeMB) << "/s \n";
+    cout << "Compression Speed:                 " << FormatFriendlyBytes(pZipJob->mJobProgress.GetBytesPerSecond(), StringHelpers::kMiB) << "/s \n";
 
     cout << "[==============================================================]\n";
 
@@ -213,23 +204,27 @@ void ZipJob::RunDiffJob(void* pContext)
 
     eToStringFormat stringFormat = pZipJob->mOutputFormat;
 
-    boost::posix_time::ptime  startTime = boost::posix_time::microsec_clock::local_time();
+    //boost::posix_time::ptime  startTime = boost::posix_time::microsec_clock::local_time();
+
+    uint64_t startTime = GetUSSinceEpoch();
+
+
 
     shared_ptr<cZZFile> pZZFile;
-    if (!cZZFile::Open(pZipJob->msPackageURL, cZZFile::ZZFILE_READ, pZZFile, pZipJob->mbVerbose))
+    if (!cZZFile::Open(pZipJob->msPackageURL, cZZFile::ZZFILE_READ, pZZFile, pZipJob->msName, pZipJob->msPassword, pZipJob->mbVerbose))
     {
-        pZipJob->mJobStatus.SetError(JobStatus::kError_OpenFailed, L"Failed to open package: \"" + pZipJob->msPackageURL + L"\"");
+        pZipJob->mJobStatus.SetError(JobStatus::kError_OpenFailed, "Failed to open package: \"" + pZipJob->msPackageURL + "\"");
         return;
     }
 
     cZipCD zipCD;
     if (!zipCD.Init(*pZZFile))
     {
-        pZipJob->mJobStatus.SetError(JobStatus::kError_ReadFailed, L"Failed to read Zip Central Directory from package: \"" + pZipJob->msPackageURL + L"\"");
+        pZipJob->mJobStatus.SetError(JobStatus::kError_ReadFailed, "Failed to read Zip Central Directory from package: \"" + pZipJob->msPackageURL + "\"");
         return;
     }
 
-    wstring sExtractPath = pZipJob->msBaseFolder + L"/";
+    string sExtractPath = pZipJob->msBaseFolder + "/";
 
     ThreadPool pool(pZipJob->mnThreads);
     vector<shared_future<DiffTaskResult> > diffResults;
@@ -242,14 +237,14 @@ void ZipJob::RunDiffJob(void* pContext)
             if (cdHeader.mFileName.length() == 0)
                 return DiffTaskResult(DiffTaskResult::kError, 0, "empty filename.");
 
-            boost::filesystem::path fullPath(pZipJob->msBaseFolder);
+            std::filesystem::path fullPath(pZipJob->msBaseFolder);
             fullPath.append(cdHeader.mFileName);
 
             // If the entry is a folder (ending in '/') see if that folder already exists
             if (cdHeader.mFileName[cdHeader.mFileName.length() - 1] == '/')
             {
                 // Directory Diff Check
-                if (boost::filesystem::exists(fullPath) && boost::filesystem::is_directory(fullPath))
+                if (std::filesystem::exists(fullPath) && std::filesystem::is_directory(fullPath))
                 {
                     return DiffTaskResult(DiffTaskResult::kDirMatch, 0, cdHeader.mFileName);
                 }
@@ -261,12 +256,12 @@ void ZipJob::RunDiffJob(void* pContext)
             else
             {
                 // File Diff Check
-                if (!boost::filesystem::exists(fullPath))
+                if (!std::filesystem::exists(fullPath))
                 {
                     return DiffTaskResult(DiffTaskResult::kFilePackageOnly, cdHeader.mUncompressedSize, cdHeader.mFileName);
                 }
 
-                if (pZipJob->FileNeedsUpdate(string_to_wstring(fullPath.string()), cdHeader.mUncompressedSize, cdHeader.mCRC32))
+                if (pZipJob->FileNeedsUpdate(fullPath.string(), cdHeader.mUncompressedSize, cdHeader.mCRC32))
                 {
                     return DiffTaskResult(DiffTaskResult::kFileDifferent, cdHeader.mUncompressedSize, cdHeader.mFileName);
                 }
@@ -278,9 +273,9 @@ void ZipJob::RunDiffJob(void* pContext)
 
     // Step 2) See what target files exist (local) that are not in the source (zip)
     tCDFileHeaderList localFiles;
-    boost::filesystem::path fullPath(pZipJob->msBaseFolder);
+    filesystem::path fullPath(pZipJob->msBaseFolder);
 
-    for (auto it : recursive_directory_range(fullPath))
+    for (auto it : filesystem::recursive_directory_iterator(fullPath))
     {
         string sRelativePath = it.path().generic_string().substr(pZipJob->msBaseFolder.length());  // get the relative path from the iterator's found path
         bool bIsDirectory = is_directory(it.path());
@@ -295,7 +290,7 @@ void ZipJob::RunDiffJob(void* pContext)
             if (bIsDirectory)
                 diffResults.emplace_back(pool.enqueue([=] { return DiffTaskResult(DiffTaskResult::kDirPathOnly, 0, sRelativePath); }));
             else
-                diffResults.emplace_back(pool.enqueue([=] { return DiffTaskResult(DiffTaskResult::kFilePathOnly, boost::filesystem::file_size(it.path()), sRelativePath); }));
+                diffResults.emplace_back(pool.enqueue([=] { return DiffTaskResult(DiffTaskResult::kFilePathOnly, std::filesystem::file_size(it.path()), sRelativePath); }));
         }
     }
 
@@ -330,15 +325,17 @@ void ZipJob::RunDiffJob(void* pContext)
 
     bool bAllMatch = (nDifferentFiles == 0 && nSourceOnlyFiles == 0 && nTargetOnlyFiles == 0);
 
-    boost::posix_time::ptime endTime = boost::posix_time::microsec_clock::local_time();
-    boost::posix_time::time_duration diff = endTime - startTime;
+    uint64_t endTime = GetUSSinceEpoch();
+//    boost::posix_time::ptime endTime = boost::posix_time::microsec_clock::local_time();
+    uint64_t diff = endTime - startTime;
+//    boost::posix_time::time_duration diff = endTime - startTime;
 
 
     // Write formatted header
     cout << StartPageHeader(stringFormat);
     cout << StartSection(stringFormat);
     cout << FormatStrings(stringFormat, "ZiP Package", "Path");
-    cout << FormatStrings(stringFormat, wstring_to_string(pZipJob->msPackageURL), wstring_to_string(pZipJob->msBaseFolder));
+    cout << FormatStrings(stringFormat, pZipJob->msPackageURL, pZipJob->msBaseFolder);
     cout << EndSection(stringFormat);
 
     // If any files are different then show a breakdown of differences
@@ -403,16 +400,16 @@ void ZipJob::RunDiffJob(void* pContext)
     pZipJob->mJobStatus.mStatus = JobStatus::kFinished;
 }
 
-bool ZipJob::FileNeedsUpdate(const wstring& sPath, uint64_t nComparedFileSize, uint32_t nComparedFileCRC)
+bool ZipJob::FileNeedsUpdate(const string& sPath, uint64_t nComparedFileSize, uint32_t nComparedFileCRC)
 {
     if (mbVerbose)
-        wcout << "Verifying file " << sPath;
+        cout << "Verifying file " << sPath;
 
     shared_ptr<cZZFile> pLocalFile;
-    if (!cZZFile::Open(sPath, cZZFile::ZZFILE_READ, pLocalFile, mbVerbose))	// If no local file it clearly needs to be updated
+    if (!cZZFile::Open(sPath, cZZFile::ZZFILE_READ, pLocalFile, "", "", mbVerbose))	// If no local file it clearly needs to be updated
     {
         if (mbVerbose)
-            wcout << "...missing. NEEDS UPDATE.\n";
+            cout << "...missing. NEEDS UPDATE.\n";
         return true;
     }
 
@@ -420,7 +417,7 @@ bool ZipJob::FileNeedsUpdate(const wstring& sPath, uint64_t nComparedFileSize, u
     if (nFileSize != nComparedFileSize)	// if the file size is different no need to do a CRC calc
     {
         if (mbVerbose)
-            wcout << "...size on disk:" << nFileSize << " package:" << nComparedFileSize << ". NEEDS UPDATE.\n";
+            cout << "...size on disk:" << nFileSize << " package:" << nComparedFileSize << ". NEEDS UPDATE.\n";
         return true;
     }
 
@@ -440,12 +437,12 @@ bool ZipJob::FileNeedsUpdate(const wstring& sPath, uint64_t nComparedFileSize, u
     if (nCRC != nComparedFileCRC)
     {
         if (mbVerbose)
-            wcout << "...CRC on disk:" << nCRC << " package:" << nComparedFileCRC << ". NEEDS UPDATE.\n";
+            cout << "...CRC on disk:" << nCRC << " package:" << nComparedFileCRC << ". NEEDS UPDATE.\n";
         return true;
     }
 
     if (mbVerbose)
-        wcout << "...matches.\n";
+        cout << "...matches.\n";
 
     return false;
 }
@@ -459,25 +456,26 @@ void ZipJob::RunDecompressionJob(void* pContext)
 
     if (pZipJob->mbVerbose)
     {
-        wcout << "Running Deompression Job.\n";
-        wcout << "Package: " << pZipJob->msPackageURL << "\n";
-        wcout << "Path:    " << pZipJob->msBaseFolder << "\n";
-        wcout << "Pattern: " << pZipJob->msPattern << "\n";
-        wcout << "Threads: " << pZipJob->mnThreads << "\n";
+        cout << "Running Deompression Job.\n";
+        cout << "Package: " << pZipJob->msPackageURL << "\n";
+        cout << "Path:    " << pZipJob->msBaseFolder << "\n";
+        cout << "Pattern: " << pZipJob->msPattern << "\n";
+        cout << "Threads: " << pZipJob->mnThreads << "\n";
     }
 
 
     pZipJob->mJobStatus.mStatus = JobStatus::eJobStatus::kRunning;
-    boost::posix_time::ptime  startTime = boost::posix_time::microsec_clock::local_time();
+    //boost::posix_time::ptime  startTime = boost::posix_time::microsec_clock::local_time();
+    uint64_t startTime = GetUSSinceEpoch();
 
     ZZipAPI zipAPI;
     if (!zipAPI.Init(pZipJob->msPackageURL))
     {
-        pZipJob->mJobStatus.SetError(JobStatus::kError_OpenFailed, L"Couldn't Open package:\"" + pZipJob->msPackageURL + L"\" for Decompression Job!");
+        pZipJob->mJobStatus.SetError(JobStatus::kError_OpenFailed, "Couldn't Open package:\"" + pZipJob->msPackageURL + "\" for Decompression Job!");
         return;
     }
 
-    wstring sExtractPath = pZipJob->msBaseFolder + L"/";
+    string sExtractPath = pZipJob->msBaseFolder + "/";
 
     cZipCD& zipCD = zipAPI.GetZipCD();
 
@@ -488,10 +486,10 @@ void ZipJob::RunDecompressionJob(void* pContext)
     uint64_t nTotalTimeOnFileVerification = 0;
     uint64_t nTotalBytesVerified = 0;
 
-    string sPattern = wstring_to_string(pZipJob->msPattern);
+    string sPattern = pZipJob->msPattern;
 
     // Create folder structure and build list of files that match pattern
-    wcout << "Creating Folders.\n";
+    cout << "Creating Folders.\n";
     for (tCDFileHeaderList::iterator it = zipCD.mCDFileHeaderList.begin(); it != zipCD.mCDFileHeaderList.end(); it++)
     {
         cCDFileHeader& cdFileHeader = *it;
@@ -499,9 +497,9 @@ void ZipJob::RunDecompressionJob(void* pContext)
         if (FNMatch(sPattern, cdFileHeader.mFileName))
         {
             if (pZipJob->mbVerbose)
-                wcout << "Pattern: \"" << sPattern.c_str() << "\" File: \"" << cdFileHeader.mFileName.c_str() << "\" matches. \n";
+                cout << "Pattern: \"" << sPattern.c_str() << "\" File: \"" << cdFileHeader.mFileName.c_str() << "\" matches. \n";
 
-            boost::filesystem::path fullPath(pZipJob->msBaseFolder);
+            std::filesystem::path fullPath(pZipJob->msBaseFolder);
             fullPath.append(cdFileHeader.mFileName);
 
             // If the path ends in '/' it's a folder and shouldn't be processed for decompression
@@ -513,7 +511,7 @@ void ZipJob::RunDecompressionJob(void* pContext)
         else
         {
             if (pZipJob->mbVerbose)
-                wcout << "File Skipped: \"" << cdFileHeader.mFileName.c_str() << "\"\n";
+                cout << "File Skipped: \"" << cdFileHeader.mFileName.c_str() << "\"\n";
             nTotalFilesSkipped++;
         }
     }
@@ -528,16 +526,16 @@ void ZipJob::RunDecompressionJob(void* pContext)
             if (cdHeader.mFileName.length() == 0)
                 return DecompressTaskResult(DecompressTaskResult::kAlreadyUpToDate, 0, 0, 0, 0, "", "empty filename.");
 
-            boost::filesystem::path fullPath(pZipJob->msBaseFolder);
+            std::filesystem::path fullPath(pZipJob->msBaseFolder);
             fullPath.append(cdHeader.mFileName);
 
 
             // decompress
-            if (!is_directory(fullPath.branch_path()))
+            if (!filesystem::is_directory(fullPath.parent_path()))
             {
                 if (pZipJob->mbVerbose)
-                    wcout << "Creating Path: \"" << fullPath.branch_path().c_str() << "\"\n";
-                boost::filesystem::create_directories(fullPath.branch_path());
+                    cout << "Creating Path: \"" << fullPath.parent_path().c_str() << "\"\n";
+                std::filesystem::create_directories(fullPath.parent_path());
             }
 
             // If the path ends in '/' it's a folder and shouldn't be processed for decompression
@@ -545,14 +543,18 @@ void ZipJob::RunDecompressionJob(void* pContext)
             {
                 if (!pZipJob->mbSkipCRC)	// If doing CRC checking
                 {
-                    boost::posix_time::ptime verificationStartTime = boost::posix_time::microsec_clock::local_time();
+//                    boost::posix_time::ptime verificationStartTime = boost::posix_time::microsec_clock::local_time();
+                    uint64_t verificationStartTime = GetUSSinceEpoch();
 
-                    bool bNeedsUpdate = pZipJob->FileNeedsUpdate(fullPath.wstring(), cdHeader.mUncompressedSize, cdHeader.mCRC32);
+                    bool bNeedsUpdate = pZipJob->FileNeedsUpdate(fullPath.string(), cdHeader.mUncompressedSize, cdHeader.mCRC32);
 
-                    boost::posix_time::ptime verificationEndTime = boost::posix_time::microsec_clock::local_time();
-                    boost::posix_time::time_duration verificationDelta = verificationEndTime - verificationStartTime;
+//                    boost::posix_time::ptime verificationEndTime = boost::posix_time::microsec_clock::local_time();
+                    uint64_t verificationEndTime = GetUSSinceEpoch();
 
-                    nTotalTimeOnFileVerification += verificationDelta.total_microseconds();
+//                    boost::posix_time::time_duration verificationDelta = verificationEndTime - verificationStartTime;
+                    uint64_t verificationDelta = verificationEndTime - verificationStartTime;
+
+                    nTotalTimeOnFileVerification += verificationDelta;
                     nTotalBytesVerified += cdHeader.mUncompressedSize;   // in reality it's the size of the file on the drive but this should be good enough for tracking purposes
 
 
@@ -563,7 +565,7 @@ void ZipJob::RunDecompressionJob(void* pContext)
                     }
                 }
 
-                    if (zipAPI.DecompressToFile(string_to_wstring(cdHeader.mFileName), fullPath.generic_wstring(), &pZipJob->mJobProgress))
+                    if (zipAPI.DecompressToFile(cdHeader.mFileName, fullPath.generic_string(), &pZipJob->mJobProgress))
                     {
                         return DecompressTaskResult(DecompressTaskResult::kExtracted, 0, cdHeader.mCompressedSize, cdHeader.mUncompressedSize, 0, cdHeader.mFileName, "Extracted File");
                     }
@@ -602,8 +604,9 @@ void ZipJob::RunDecompressionJob(void* pContext)
     }
 
 
-    boost::posix_time::ptime endTime = boost::posix_time::microsec_clock::local_time();
-    boost::posix_time::time_duration diff = endTime - startTime;
+
+    uint64_t endTime = GetUSSinceEpoch();
+    uint64_t diffMS = (endTime - startTime)/1000;
 
     if (nTotalErrors == 0)
         pZipJob->mJobStatus.mStatus = JobStatus::eJobStatus::kFinished;
@@ -623,7 +626,7 @@ void ZipJob::RunDecompressionJob(void* pContext)
         cout << "\n";
     }
 
-    bool bIsHTTPJob = (pZipJob->msPackageURL.substr(0, 4) == L"http");  // if the url starts with "http" then we're downloading 
+    bool bIsHTTPJob = (pZipJob->msPackageURL.substr(0, 4) == "http");  // if the url starts with "http" then we're downloading 
 
 
     if (nTotalBytesDownloaded > 0 || nTotalFilesUpdated > 0)
@@ -640,16 +643,16 @@ void ZipJob::RunDecompressionJob(void* pContext)
 
         cout << FormatFriendlyBytes(nTotalBytesDownloaded);
         
-        if (diff.total_milliseconds() > 0)
-            cout << " (Rate:" << (nTotalBytesDownloaded / 1024) / (diff.total_milliseconds()) << "MB/s)";
+        if (diffMS > 0)
+            cout << " (Rate:" << (nTotalBytesDownloaded / 1024) / (diffMS) << "MB/s)";
 
         cout << "\n";
 
 
         cout << "Total Uncompressed Bytes Written:  " << FormatFriendlyBytes(nTotalWrittenToDisk);
         
-        if (diff.total_milliseconds() > 0)
-            cout << " (Rate:" << (nTotalWrittenToDisk / 1024) / (diff.total_milliseconds()) << "MB/s)";
+        if (diffMS > 0)
+            cout << " (Rate:" << (nTotalWrittenToDisk / 1024) / (diffMS) << "MB/s)";
 
         cout << "\n";
     }
@@ -664,7 +667,7 @@ void ZipJob::RunDecompressionJob(void* pContext)
     if (pZipJob->mbVerbose)
     {
         cout << "[--------------------------------------------------------------]\n";
-        cout << "Total Job Time:                    " << diff.total_milliseconds() << "\n";
+        cout << "Total Job Time:                    " << diffMS << "\n";
         cout << "Threads:                           " << pZipJob->mnThreads << "\n";
         cout << "[==============================================================]\n";
     }
@@ -676,23 +679,25 @@ void ZipJob::RunListJob(void* pContext)
 {
     ZipJob* pZipJob = (ZipJob*)pContext;
 
-    wstring sURL = pZipJob->msPackageURL;
+    string sURL = pZipJob->msPackageURL;
+    string sName = pZipJob->msName;
+    string sPassword = pZipJob->msPassword;
 
-    wcout << "List files in Package: " << sURL << "\n";
+    cout << "List files in Package: " << sURL << "\n";
     if (!pZipJob->msPattern.empty())
-        wcout << "Files that match pattern: \"" << pZipJob->msPattern << "\"\n";
+        cout << "Files that match pattern: \"" << pZipJob->msPattern << "\"\n";
 
     shared_ptr<cZZFile> pZZFile;
-    if (!cZZFile::Open(sURL, cZZFile::ZZFILE_READ, pZZFile, pZipJob->mbVerbose))
+    if (!cZZFile::Open(sURL, cZZFile::ZZFILE_READ, pZZFile, sName, sPassword, pZipJob->mbVerbose))
     {
-        pZipJob->mJobStatus.SetError(JobStatus::kError_OpenFailed, L"Failed to open package: \"" + sURL + L"\"");
+        pZipJob->mJobStatus.SetError(JobStatus::kError_OpenFailed, "Failed to open package: \"" + sURL + "\"");
         return;
     }
 
     cZipCD zipCD;
     if (!zipCD.Init(*pZZFile))
     {
-        pZipJob->mJobStatus.SetError(JobStatus::kError_ReadFailed, L"Failed to read Zip Central Directory from package: \"" + sURL + L"\"");
+        pZipJob->mJobStatus.SetError(JobStatus::kError_ReadFailed, "Failed to read Zip Central Directory from package: \"" + sURL + "\"");
         return;
     }
 
@@ -715,7 +720,7 @@ bool ZipJob::Join()
         std::chrono::milliseconds elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds> (std::chrono::system_clock::now() - timeOfLastReport);
         if (elapsed_ms.count() > kMSBetweenReports && mJobProgress.GetEstimatedSecondsRemaining() > kMSBetweenReports/1000) // don't report any more if there's less than 2 seconds remaining
         {
-            cout << mJobProgress.GetPercentageComplete() << "% Completed. Elapsed:" << mJobProgress.GetElapsedTimeMS() / 1000 << "s Remaining:~" << mJobProgress.GetEstimatedSecondsRemaining() << "s Rate:" << FormatFriendlyBytes(mJobProgress.GetBytesPerSecond(), kSizeMB) << "/s Completed:" << FormatFriendlyBytes(mJobProgress.GetBytesProcessed(), kSizeMB) << " of " << FormatFriendlyBytes(mJobProgress.GetBytesToProcess(), kSizeMB) << " \n";
+            cout << mJobProgress.GetPercentageComplete() << "% Completed. Elapsed:" << mJobProgress.GetElapsedTimeMS() / 1000 << "s Remaining:~" << mJobProgress.GetEstimatedSecondsRemaining() << "s Rate:" << FormatFriendlyBytes(mJobProgress.GetBytesPerSecond(), StringHelpers::kMiB) << "/s Completed:" << FormatFriendlyBytes(mJobProgress.GetBytesProcessed(), StringHelpers::kMiB) << " of " << FormatFriendlyBytes(mJobProgress.GetBytesToProcess(), StringHelpers::kMiB) << " \n";
             timeOfLastReport = std::chrono::system_clock::now();
         }
     }

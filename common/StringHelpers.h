@@ -16,22 +16,22 @@
 #include <cctype>
 #include <locale>
 #include <codecvt>
-#include <boost/lexical_cast.hpp>
-
-using namespace std;
+#include <algorithm>
+#include <list>
+//#include <boost/lexical_cast.hpp>
 
 namespace StringHelpers
 {
     //////////////////////////////////////////////////////////////////////////////////////////////
     // Common conversions
     // some commonly used conversions
-    string	int_to_hex_string(uint32_t nVal);
-    string	int_to_hex_string(uint64_t nVal);
-    string	binary_to_hex(uint8_t* pBuf, int32_t nLength);
+    std::string	int_to_hex_string(uint32_t nVal);
+    std::string	int_to_hex_string(uint64_t nVal);
+    std::string	binary_to_hex(uint8_t* pBuf, int32_t nLength);
 
     
 
-    inline string  wstring_to_string(const wstring& rhs)
+    inline std::string  wstring_to_string(const std::wstring& rhs)
     {
         using convert_typeX = std::codecvt_utf8<wchar_t>;
         std::wstring_convert<convert_typeX, wchar_t> converterX;
@@ -39,7 +39,7 @@ namespace StringHelpers
         return converterX.to_bytes(rhs);
     }
 
-    inline wstring string_to_wstring(const string& rhs)
+    inline std::wstring string_to_wstring(const std::string& rhs)
     {
         using convert_typeX = std::codecvt_utf8<wchar_t>;
         std::wstring_convert<convert_typeX, wchar_t> converterX;
@@ -73,7 +73,7 @@ namespace StringHelpers
 		kHTML = 3
 	};
 
-    inline string StartPageHeader(eToStringFormat format)
+    inline std::string StartPageHeader(eToStringFormat format)
     {
         if (format == kHTML)
             return "<html><style> *{ font-family: 'Lucida Console', Lucida, sans-serif; font-size: 10px !important;}</style><body>";
@@ -81,7 +81,7 @@ namespace StringHelpers
         return "";
     }
 
-    inline string EndPageFooter(eToStringFormat format)
+    inline std::string EndPageFooter(eToStringFormat format)
     {
         if (format == kHTML)
             return "</body></html>";
@@ -89,7 +89,7 @@ namespace StringHelpers
         return "";
     }
 
-    inline string StartSection(eToStringFormat format)
+    inline std::string StartSection(eToStringFormat format)
     {
         if (format == kHTML)
             return "<table border=1>";
@@ -97,7 +97,7 @@ namespace StringHelpers
         return "";
     }
 
-    inline string EndSection(eToStringFormat format)
+    inline std::string EndSection(eToStringFormat format)
     {
         if (format == kHTML)
             return "</table>";
@@ -106,15 +106,15 @@ namespace StringHelpers
     }
 
 
-	inline string StartDelimiter(eToStringFormat format, int32_t nSpan = 1)
+	inline std::string StartDelimiter(eToStringFormat format, int32_t nSpan = 1)
 	{
 		if (format == kHTML)
-			return "<tr><td colspan=\"" + to_string(nSpan) + "\">";
+			return "<tr><td colspan=\"" + std::to_string(nSpan) + "\">";
 
 		return "";
 	}
 
-	inline string Separator(eToStringFormat format)
+	inline std::string Separator(eToStringFormat format)
 	{
 		switch (format)
 		{
@@ -129,7 +129,7 @@ namespace StringHelpers
 		return ",";
 	}
 
-	inline string EndDelimiter(eToStringFormat format)
+	inline std::string EndDelimiter(eToStringFormat format)
 	{
 		if (format == kHTML)
 			return "</td></tr>\n";
@@ -137,7 +137,7 @@ namespace StringHelpers
 		return "\n";
 	}
 
-	inline string NextLine(eToStringFormat format)
+	inline std::string NextLine(eToStringFormat format)
 	{
 		if (format == kHTML)
 			return "<br>\n";
@@ -146,17 +146,17 @@ namespace StringHelpers
 	}
 
 	template <class ...A>
-	string FormatStrings(eToStringFormat format, A... arg)
+    std::string FormatStrings(eToStringFormat format, A... arg)
 	{
 
 		int32_t numArgs = sizeof...(arg);
-		list<string> stringList = { arg... };
+        std::list<std::string> stringList = { arg... };
 
-		string sReturn(StartDelimiter(format));
+        std::string sReturn(StartDelimiter(format));
 
 		if (numArgs > 0)
 		{
-			list<string>::iterator it = stringList.begin();
+            std::list<std::string>::iterator it = stringList.begin();
 			for (int32_t i = 0; i < numArgs - 1; i++) // add all but the last one with the separator trailing
 				sReturn += (*it++) + Separator(format);
 
@@ -170,59 +170,66 @@ namespace StringHelpers
     
 
     //////////////////////////////////////////////////////////////////////////////////////////////
-    // Readable byte sizes
-    enum eSize
+    struct sSizeEntry
     {
-        kSizeAuto   = 0,
-        kSizeBytes  = 1,
-        kSizeKB     = 2,
-        kSizeMB     = 3,
-        kSizeGB     = 4,
-        kSizeTB     = 5
+        const char* label;
+        int64_t     value;
     };
 
+    static const int64_t kAuto = 0LL;
+    static const int64_t kBytes = 1LL;
+    static const int64_t kK = 1000LL;
+    static const int64_t kKB = 1000LL;
+    static const int64_t kKiB = 1024LL;
 
-    inline
-    string FormatFriendlyBytes(uint64_t nBytes, eSize type = kSizeAuto)
+    static const int64_t kM = 1000LL * 1000LL;
+    static const int64_t kMB = 1000LL * 1000LL;
+    static const int64_t kMiB = 1024LL * 1024LL;
+
+    static const int64_t kG = 1000LL * 1000LL * 1000LL;
+    static const int64_t kGB = 1000LL * 1000LL * 1000LL;
+    static const int64_t kGiB = 1024LL * 1024LL * 1024LL;
+
+    static const int64_t kT = 1000LL * 1000LL * 1000LL * 1000LL;
+    static const int64_t kTB = 1000LL * 1000LL * 1000LL * 1000LL;
+    static const int64_t kTiB = 1024LL * 1024LL * 1024LL * 1024LL;
+
+    static const int64_t kP = 1000LL * 1000LL * 1000LL * 1000LL * 1000LL;
+    static const int64_t kPB = 1000LL * 1000LL * 1000LL * 1000LL * 1000LL;
+    static const int64_t kPiB = 1024LL * 1024LL * 1024LL * 1024LL * 1024LL;
+
+
+    static const sSizeEntry sizeEntryTable[] =
     {
-        const uint64_t kTB = 1024ull * 1024ull * 1024ull * 1024ull;
-        const uint64_t kGB = 1024ull * 1024ull * 1024ull;
-        const uint64_t kMB = 1024ull * 1024ull;
-        const uint64_t kKB = 1024ull;
+        { "B"     , 1 },
 
-        if (type == kSizeAuto)
-        {
-            if (nBytes > kTB)   // TB show in GB
-                type = kSizeGB;
-            if (nBytes > kGB)	// GB show in MB
-                type = kSizeMB;
-            else if (nBytes > kMB)	// MB show in KB
-                type = kSizeKB;
-            else
-                type = kSizeBytes;
-        }
+        { "K"     , kK},
+        { "KB"    , kKB},
+        { "KIB"   , kKiB},
 
-        switch (type)
-        {
-        case kSizeKB:
-            return boost::lexical_cast<string> (nBytes / kKB) + "KB";
-            break;
-        case kSizeMB:
-            return boost::lexical_cast<string> (nBytes / kMB) + "MB";
-            break;
-        case kSizeGB:
-            return boost::lexical_cast<string> (nBytes / kGB) + "GB";
-            break;
-        }
+        { "M"     , kM},
+        { "MB"    , kMB},
+        { "MIB"   , kMiB},
 
-        if (nBytes > kGB)       // return in MB
-            return boost::lexical_cast<string> (nBytes / kMB) + "MB";
-        else if (nBytes > kMB)  // return in KB
-            return boost::lexical_cast<string> (nBytes / kKB) + "KB";
+        { "G"     , kG},
+        { "GB"    , kGB},
+        { "GIB"   , kGiB},
 
-        return boost::lexical_cast<string> (nBytes) + "bytes";
-    }
+        { "T"     , kT},
+        { "TB"    , kTB},
+        { "TIB"   , kTiB},
+
+        { "P"     , kP},
+        { "PB"    , kPB},
+        { "PIB"   , kPiB}
+    };
+
+    static const int sizeEntryTableSize = sizeof(sizeEntryTable) / sizeof(sSizeEntry);
 
 
+
+    std::string FormatFriendlyBytes(uint64_t nBytes, int64_t sizeType = kAuto);
+    std::string UserReadableFromInt(int64_t nValue);
+    int64_t IntFromUserReadable(std::string sReadable);
 };
 

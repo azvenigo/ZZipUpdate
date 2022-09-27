@@ -18,276 +18,174 @@
 #include <tchar.h>
 #include <locale>
 #include <string>
-#include <boost/lexical_cast.hpp>
+//#include <boost/lexical_cast.hpp>
 #include "ZipHeaders.h"
 #include "zlibAPI.h"
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include "ZipJob.h"
+#include "helpers/CommandLineParser.h"
 
 using namespace std;
 
 // App Globals for reading command line
 ZipJob::eJobType    gCommand        = ZipJob::eJobType::kNone;
-wstring             gsPackageURL;	                            // source package URL
-wstring             gsBaseFolder;                               // base folder. (default is the folder of ZZipUpdate.exe)
-wstring             gsPattern;                                  // wildcard pattern to match (example "*base*/*.exe"  matches all directories that have the string "base" in them and in those directories all files that end in .exe)
+string             gsPackageURL;	                            // source package URL
+string             gsAuthName;
+string             gsAuthPassword;
+string             gsBaseFolder;                               // base folder. (default is the folder of ZZipUpdate.exe)
+string             gsPattern;                                  // wildcard pattern to match (example "*base*/*.exe"  matches all directories that have the string "base" in them and in those directories all files that end in .exe)
 bool                gbSkipCRC		= false;                    // Whether to bypass CRC checks when doing sync
-bool                gbKill			= false;                    // TBD
-uint32_t            gNumThreads		= 6;	                    // Multithreaded sync/extraction
+//bool                gbKill			= false;                    // TBD
+int64_t            gNumThreads		= std::thread::hardware_concurrency();;	                    // Multithreaded sync/extraction
+string              gsOutputFormat;
 eToStringFormat     gOutputFormat	= kTabs;                    // For lists or diff operations, output in various formats
 bool                gbVerbose       = false;                    // Diagnostics. Forces single threaded operation and spits out a lot of logging data.
-
-bool ParseParams(int argc, _TCHAR* argv[])
-{
-
-	auto parseParamsFunc = [](std::list<wstring>& params, std::list<wstring>& flags)
-	{
-        const wstring sCreateCommand(L"create");
-        const wstring sExtractCommand(L"extract");
-        const wstring sListCommand(L"list");
-        const wstring sDiffCommand(L"diff");
-		const wstring sSyncCommand(L"sync");
-
-        const wstring sPatternFlag(L"-pattern:");
-		const wstring sSkipCRCFlag(L"-skipcrc");
-		const wstring sKillFlag(L"-kill");
-		const wstring sOutputFormatFlag(L"-outputformat:");
-		const wstring sThreadsFlag(L"-threads:");
-        const wstring sVerboseFlag(L"-verbose");
-
-        // first parameter is the launched app itself. Don't need it
-        params.pop_front();
-
-        if (params.empty())
-        {
-            // command not found
-            wcout << "ERROR: no command specified\n";
-            return false;
-
-        }
-
-        // next parameter should be the command
-        wstring sCommand = *params.begin();
-        params.pop_front();
-
-        makelower(sCommand);
-
-        uint32_t nRequiredParameters = 0;
-
-        if (sCommand.find(sListCommand) == 0)
-        {
-            gCommand = ZipJob::kList;
-            nRequiredParameters = 1;
-        }
-        else if (sCommand.find(sDiffCommand) == 0)
-        {
-            gCommand = ZipJob::kDiff;
-            nRequiredParameters = 2;
-        }
-        else if (sCommand.find(sCreateCommand) == 0)
-        {
-            gCommand = ZipJob::kCompress;
-            nRequiredParameters = 2;
-        }
-        else if (sCommand.find(sSyncCommand) == 0)
-        {
-            gCommand = ZipJob::kExtract;
-            gbSkipCRC = false;      // Sync job is just decompress while checking CRCs
-            nRequiredParameters = 2;
-        }
-        else if (sCommand.find(sExtractCommand) == 0)
-        {
-            gCommand = ZipJob::kExtract;
-            gbSkipCRC = true;       // Bypass any CRC checks, force overwrite
-            nRequiredParameters = 2;
-        }
-        else
-        {
-            // unknown command
-            wcout << "ERROR: Unknown command: \"" << sCommand << "\"\n";
-            return false;
-        }
-
-        if (params.size() < nRequiredParameters)
-        {
-            wcout << "ERROR: Too few parameters specified for command: \"" << sCommand << "\"\n";
-            return false;
-        }
-
-        // next parameter should be the URL or file
-        gsPackageURL = *params.begin();
-        params.pop_front();
-
-        if (gsPackageURL.find(L"?") != std::string::npos ||
-            gsPackageURL.find(L"*") != std::string::npos)
-        {
-            wcout << "ERROR: URL \"" << gsPackageURL << "\" includes illegal wildcards.\n";
-            return false;
-        }
+bool                gbSkipCertCheck = false;
 
 
-
-        // If the command is extract, sync, create or diff then the next parameter should be the folder
-        if (gCommand == ZipJob::kDiff ||
-            gCommand == ZipJob::kCompress ||
-            gCommand == ZipJob::kExtract)
-        {
-            gsBaseFolder = *params.begin();
-            params.pop_front();
-        }
-
-        if (gsBaseFolder.find(L"?") != std::string::npos ||
-            gsBaseFolder.find(L"*") != std::string::npos)
-        {
-            wcout << "ERROR: Folder \"" << gsBaseFolder << "\" includes illegal wildcards.\n";
-            return false;
-        }
-
-        // If there are any more parameters it must be a pattern
-        if (!params.empty())
-        {
-            gsPattern = *params.begin();
-            params.pop_front();
-        }
-
-        if (!params.empty())
-        {
-            wcout << "WARNING: Ignoring extra specified parameters\n";
-            for (auto param : params)
-                wcout << param << "\n";
-        }
-
-
-        // New command line format
-        // -list URL [PATTERN] [optional params]
-        // -extract URL FOLDER [PATTERN] [optional params]
-        // -sync    URL FOLDER [PATTERN] [optional params]
-        // -create  URL FOLDER [PATTERN] [optional params]
-        // -diff    URL FOLDER [optional params]
-        //
-        // Optional Params
-        // -skipcrc
-        // -kill
-        // -outputformat
-        // -threads
-        // -verbose
-
-        // parse any specified flags
-        for (std::list<wstring>::iterator it = flags.begin(); it != flags.end(); it++)
-        {
-            wstring sFlag(*it);
-
-            if (sFlag.find(sSkipCRCFlag) == 0)
-                gbSkipCRC = true;
-            else if (sFlag.find(sKillFlag) == 0)
-                gbKill = true;
-            else if (sFlag.find(sVerboseFlag) == 0)
-                gbVerbose = true;
-            else if (sFlag.find(sOutputFormatFlag) == 0)
-            {
-                wstring sFormat(sFlag.substr(sOutputFormatFlag.length()));
-                if (sFormat == L"html")
-                    gOutputFormat = kHTML;
-                else if (sFormat == L"tabs")
-                    gOutputFormat = kTabs;
-                else if (sFormat == L"commas")
-                    gOutputFormat = kCommas;
-                else
-                    gOutputFormat = kUnknown;
-            }
-            else if (sFlag.find(sThreadsFlag) == 0)
-            {
-                wstring sNumThreads(sFlag.substr(sThreadsFlag.length()));
-                gNumThreads = boost::lexical_cast<int32_t> (sNumThreads);
-            }
-        }
-
-        return true;
-	};
-
-
-    std::list<wstring> params;
-    std::list<wstring> flags;
-
-    // separate the flags from the paremeters
-    for (int i = 0; i < argc; i++)
-    {
-        if (argv[i][0] == L'-')      // flags all start with '-'
-            flags.push_back(wstring(argv[i]));
-        else
-            params.push_back(wstring(argv[i]));
-    }
-
-    return parseParamsFunc(params, flags);
-}
+using namespace CLP;
 
 int _tmain(int argc, _TCHAR* argv[])
 {
+       
+    
+/*    std::shared_ptr<cZZFile> file;
+    if (!cZZFile::Open("https://speedtest-ca.turnkeyinternet.net/1000mb.bin", false, file))
+    {
+        cout << "fail\n";
+    }
+
+    
+    size_t nSize = file->GetFileSize();
+    //size_t nSize = 1 * 1024 * 1024;
+
+    uint8_t* buf = new uint8_t[nSize];
+
+    uint64_t nStartTime = GetUSSinceEpoch();
+
+    uint32_t nRead;
+    if (!file->Read(0x0, nSize, buf, nRead))
+    {
+        cout << "fail\n";
+    }
+
+    uint64_t nEndTime = GetUSSinceEpoch();
+
+    double fBPS = (nSize * 1000000) / (nEndTime - nStartTime);
+    double fMiBPS = fBPS / (1024 * 1024);
+    cout << "Received Bytes:" << nSize << " in " << (nEndTime - nStartTime) / 1000 << "ms. Rate:" << fMiBPS << "MiB/s\n";
+
+  */  
+    
+
+    
+
+
+
 //	_CrtMemState s1;
 //	_CrtMemCheckpoint(&s1);
 
-	// validate commands
-    bool bShowUsage = !ParseParams(argc, argv);
+    CommandLineParser parser;
+
+    parser.RegisterAppDescription("Performs various operations on ZIP archives whether local or remote.\n"\
+        "----------------------------------------------------------------------------\n"\
+        "note: In the following, ZIPPATH can be a fully qualified web URL or a local path.\n"\
+        "      For example the following are all ok:\n"\
+        "http://www.example.com/sample.zip\n"\
+        "https://www.example.com/sample.zip\n"\
+        "c:/example/sample.zip\n");
+
+    parser.RegisterMode("list", "Lists the content of a zip file.");
+    parser.RegisterParam("list", ParamDesc("ZIPPATH", &gsPackageURL, CLP::kPositional | CLP::kRequired, "Path or URL to a ZIP archive"));
+
+    parser.RegisterMode("create", "Creates a ZIP archive from a given folder or file.");
+    parser.RegisterParam("create", ParamDesc("ZIPPATH", &gsPackageURL, CLP::kPositional | CLP::kRequired, "Path of the ZIP archive to create."));
+    parser.RegisterParam("create", ParamDesc("FOLDER", &gsBaseFolder, CLP::kPositional | CLP::kRequired, "Base folder of files add to the archive"));
+
+    parser.RegisterMode("diff", "Compares the contents of a ZIP archive with a local folder and reports the differences." );
+    parser.RegisterParam("diff", ParamDesc("ZIPPATH", &gsPackageURL, CLP::kPositional | CLP::kRequired, "Path or URL to a ZIP archive"));
+    parser.RegisterParam("diff", ParamDesc("FOLDER", &gsBaseFolder, CLP::kPositional | CLP::kRequired, "Base folder to diff against"));
+
+    parser.RegisterMode("update", "Compares the contents of a ZIP archive with a local folder and extracts all files that are new or different.");
+    parser.RegisterParam("update", ParamDesc("ZIPPATH", &gsPackageURL, CLP::kPositional | CLP::kRequired, "Path or URL to a ZIP archive"));
+    parser.RegisterParam("update", ParamDesc("FOLDER", &gsBaseFolder, CLP::kPositional | CLP::kRequired, "Base folder to update"));
+    parser.RegisterParam("update", ParamDesc("skipcrc", &gbSkipCRC, CLP::kNamed | CLP::kOptional, "Skip CRC checks for matching files and overwrite everything when doing an update. (Same behavior as extract.)"));
+
+    parser.RegisterMode("extract", "Extracts files from a ZIP archive.");
+    parser.RegisterParam("extract", ParamDesc("ZIPPATH", &gsPackageURL, CLP::kPositional | CLP::kRequired, "Path or URL to a ZIP archive"));
+    parser.RegisterParam("extract", ParamDesc("FOLDER", &gsBaseFolder, CLP::kPositional | CLP::kRequired, "Base folder to extract to"));
+
+    parser.RegisterParam(ParamDesc("pattern", &gsPattern, CLP::kNamed | CLP::kOptional, "Wildcard pattern to use when filtering filenames"));
+
+    parser.RegisterParam(ParamDesc("name", &gsAuthName, CLP::kNamed | CLP::kOptional, "Auth name"));
+    parser.RegisterParam(ParamDesc("password", &gsAuthPassword, CLP::kNamed | CLP::kOptional, "Auth password"));
+
+    parser.RegisterParam(ParamDesc("threads", &gNumThreads, CLP::kNamed | CLP::kOptional | CLP::kRangeRestricted, "Number of threads to use when updating or extracting. Defaults to number of CPU cores.", 1, 256));
+    parser.RegisterParam(ParamDesc("skip_cert_check", &gbSkipCertCheck, CLP::kNamed | CLP::kOptional, "If true, bypasses certificate verification on secure connetion. (Careful!)"));
+
+    parser.RegisterParam(ParamDesc("verbose", &gbVerbose, CLP::kNamed | CLP::kOptional, "Noisy logging for diagnostic purposes. (note: can slow down operations significantly. Also forces single threaded operation.)"));
 
 
-    // New command line format
-    // list URL [PATTERN] [optional params]
-    // extract URL FOLDER [PATTERN] [optional params]
-    // sync    URL FOLDER [PATTERN] [optional params]
-    // create  URL FOLDER [PATTERN] [optional params]
-    // diff    URL FOLDER [optional params]
-    //
-    // Flags
-    // -skipcrc
-    // -kill
-    // -outputformat
-    // -threads
-    // -verbose
-
-
-
-
-
-	if (bShowUsage)
-	{
-        wcout << "\n";
-        wcout << "============================================================================\n";
-		wcout << "                                     *Usage*\n\n";
-        wcout << "----------------------------------------------------------------------------\n";
-        wcout << "-Commands-\n";
-        wcout << "ZZipUpdate list    URL [PATTERN] [flags]\n";
-        wcout << "ZZipUPdate extract URL FOLDER [PATTERN] [flags]\n";
-        wcout << "ZZipUpdate sync    URL FOLDER [PATTERN] [flags]\n";
-        wcout << "ZZipUpdate create  URL FOLDER [PATTERN] [flags]\n";
-        wcout << "ZZipUpdate diff    URL FOLDER [flags]\n";
-        wcout << "----------------------------------------------------------------------------\n";
-        wcout << "-Flags-\n";
-		wcout << "-skipcrc              Skip CRC checks for matching files and overwrite everything. (note: The extract and sync commands are identical except extract automatically skips CRC checking.)\n";
-		//wcout << "-kill                 Kills any processes that may be holding destination files locked. <TBD>\n";
-		wcout << "-outputformat:FORMAT  one of {html, commas, tabs} for outputing list or diff\n";
-        wcout << "-threads:NUM          Number of threads to use. Default: 6 (note: -create is single threaded since data written to the zip file must be serial.)\n";
-        wcout << "-verbose              Noisy logging for diagnostic purposes. (note: can slow down operations significantly. Also forces single threaded operation.)\n";
-        wcout << "----------------------------------------------------------------------------\n";
-        wcout << "note: In the following, URL can be a fully qualified web URL or a local path.\n";
-        wcout << "      For example the following are all ok:\n";
-        wcout << "http://www.example.com/sample.zip\n";
-        wcout << "https://www.example.com/sample.zip\n";
-        wcout << "c:/example/sample.zip\n";
-        wcout << "\n============================================================================\n";
-        wcout << "\n";
-
+    if (!parser.Parse(argc, argv))
         return -1;
-	}
+
+
+    if (gsPackageURL.find("*") != std::string::npos)
+    {
+        cout << "ERROR: URL \"" << gsPackageURL << "\" includes illegal wildcards.\n";
+        return -1;
+    }
+
+    if (gsBaseFolder.find("?") != std::string::npos ||
+        gsBaseFolder.find("*") != std::string::npos)
+    {
+        cout << "ERROR: Folder \"" << gsBaseFolder << "\" includes illegal wildcards.\n";
+        return false;
+    }
+
+    if (gsOutputFormat == "html")
+        gOutputFormat = kHTML;
+    else if (gsOutputFormat == "tabs")
+        gOutputFormat = kTabs;
+    else if (gsOutputFormat == "commas")
+        gOutputFormat = kCommas;
+    else
+        gOutputFormat = kUnknown;
+
+
+    if (parser.GetAppMode() == "list")
+        gCommand = ZipJob::kList;
+    else if (parser.GetAppMode() == "diff")
+        gCommand = ZipJob::kDiff;
+    else if (parser.GetAppMode() == "create")
+        gCommand = ZipJob::kCompress;
+    else if (parser.GetAppMode() == "update")
+    {
+        gCommand = ZipJob::kExtract;
+        gbSkipCRC = false;
+    }
+    else if (parser.GetAppMode() == "extract")
+    {
+        gCommand = ZipJob::kExtract;
+        gbSkipCRC = true;
+    }
+    else
+    {
+        cerr << "ERROR: Unknown operation mode:" << parser.GetAppMode() << "\n";
+        return -1;
+    }
+
 
 
     ZipJob newJob(gCommand);
     newJob.SetBaseFolder(gsBaseFolder);
     newJob.SetURL(gsPackageURL);
+    newJob.SetNamePassword(gsAuthName, gsAuthPassword);
     newJob.SetSkipCRC(gbSkipCRC);
-    newJob.SetNumThreads(gNumThreads);
+    newJob.SetNumThreads((uint32_t) gNumThreads);
     newJob.SetOutputFormat(gOutputFormat);
     newJob.SetPattern(gsPattern);
-    newJob.SetKillHoldingProcess(gbKill);
+//    newJob.SetKillHoldingProcess(gbKill);
     newJob.SetVerbose(gbVerbose);
 
     newJob.Run();

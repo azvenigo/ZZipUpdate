@@ -21,7 +21,6 @@
 #include "common/ZZFileAPI.h"
 #include "common/StringHelpers.h"
 
-using namespace std;
 using namespace StringHelpers;
 
 // Zip Tags (aka Signature)
@@ -48,15 +47,15 @@ public:
     cExtensibleFieldEntry(const cExtensibleFieldEntry& from);
     ~cExtensibleFieldEntry() {}
 
-    string                      ToString();
-    string                      HeaderToString();
+    std::string                      ToString();
+    std::string                      HeaderToString();
 
     uint16_t                    mnHeader;
     uint16_t                    mnSize;
     std::shared_ptr<uint8_t>    mpData;
 };
 
-typedef list<cExtensibleFieldEntry> tExtensibleFieldList;
+typedef std::list<cExtensibleFieldEntry> tExtensibleFieldList;
 
 
 
@@ -84,8 +83,8 @@ public:
         mLastModificationTime(0), mLastModificationDate(0), mCRC32(0), mCompressedSize(0), mUncompressedSize(0), mFilenameLength(0), mExtraFieldLength(0) {}
 
     bool                    ParseRaw(uint8_t* pBuffer, uint32_t& nNumBytesProcessed);     // Returns the number of bytes parsed for everything below
-    static string           FieldNames(eToStringFormat format = kTabs);        // returns tab delimited field names that correspond with the ones returned from ToString
-    string                  ToString(eToStringFormat format = kTabs);
+    static std::string           FieldNames(eToStringFormat format = kTabs);        // returns tab delimited field names that correspond with the ones returned from ToString
+    std::string                  ToString(eToStringFormat format = kTabs);
 
     uint64_t                Size(); // in bytes
 
@@ -104,7 +103,7 @@ public:
     uint64_t                mUncompressedSize;              // 22       // 32 bit in the local file header
     uint16_t                mFilenameLength;                // 26
     uint16_t                mExtraFieldLength;              // 28
-    string                  mFilename;                      // 30
+    std::string                  mFilename;                      // 30
     tExtensibleFieldList    mExtensibleFieldList;           // 30 + mFilenameLength;
 };
 
@@ -126,8 +125,8 @@ public:
         mCDStartOffset((uint32_t)-1), mNumBytesOfComment(0) {}
 
     bool            ParseRaw(uint8_t* pBuffer, uint32_t& nNumBytesProcessed);     // Returns the number of bytes parsed for everything below
-    static string   FieldNames(eToStringFormat format = kTabs);                   // returns tab delimited field names that correspond with the ones returned from ToString
-    string          ToString(eToStringFormat format = kTabs);
+    static std::string   FieldNames(eToStringFormat format = kTabs);                   // returns tab delimited field names that correspond with the ones returned from ToString
+    std::string          ToString(eToStringFormat format = kTabs);
     bool            Write(cZZFile& file); // assumes must be written at end of file
 
     uint64_t        Size() { return (uint64_t) kStaticDataSize + (uint64_t) mNumBytesOfComment; }
@@ -141,7 +140,7 @@ public:
     uint32_t        mNumBytesOfCD;                  // 12
     uint32_t        mCDStartOffset;                 // 16
     uint16_t        mNumBytesOfComment;             // 20
-    string          mComment;                       // 22
+    std::string          mComment;                       // 22
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -165,8 +164,8 @@ public:
     ~cZip64EndOfCDRecord();
 
     bool            ParseRaw(uint8_t* pBuffer, uint32_t& nNumBytesProcessed);     // Returns the number of bytes parsed for everything below
-    static string   FieldNames(eToStringFormat format = kTabs);                   // returns tab delimited field names that correspond with the ones returned from ToString
-    string          ToString(eToStringFormat format = kTabs);
+    static std::string   FieldNames(eToStringFormat format = kTabs);                   // returns tab delimited field names that correspond with the ones returned from ToString
+    std::string          ToString(eToStringFormat format = kTabs);
     bool            Write(cZZFile& file);   // assumes must be written at end of file
 
     uint64_t        Size() { return (uint64_t) kStaticDataSize + (uint64_t) mnDerivedSizeOfExtensibleDataSector; }
@@ -201,8 +200,8 @@ public:
     cZip64EndOfCDLocator() : mZip64EndOfCDLocatorTag(kZip64EndofCDLocatorTag), mDiskNumOfCD(0), mZip64EndofCDOffset(0), mNumTotalDisks(1) {}
 
     bool            ParseRaw(uint8_t* pBuffer, uint32_t& nNumBytesProcessed);     // Returns the number of bytes parsed for everything below
-    static string   FieldNames(eToStringFormat format = kTabs);                   // returns tab delimited field names that correspond with the ones returned from ToString
-    string          ToString(eToStringFormat format = kTabs);
+    static std::string   FieldNames(eToStringFormat format = kTabs);                   // returns tab delimited field names that correspond with the ones returned from ToString
+    std::string          ToString(eToStringFormat format = kTabs);
 
     bool            Write(cZZFile& file);   // assumes must be written at end of file
     uint64_t        Size() { return kStaticDataSize; }
@@ -247,8 +246,8 @@ public:
         mFileCommentLength(0), mDiskNumFileStart(0), mInternalFileAttributes(0), mExternalFileAttributes(0), mLocalFileHeaderOffset(0) {}
 
     bool                    ParseRaw(uint8_t* pBuffer, uint32_t& nNumBytesProcessed);     // Returns the number of bytes parsed for everything below
-    static string           FieldNames(eToStringFormat format = kTabs);                   // returns tab delimited field names that correspond with the ones returned from ToString
-    string                  ToString(eToStringFormat format = kTabs);
+    static std::string           FieldNames(eToStringFormat format = kTabs);                   // returns tab delimited field names that correspond with the ones returned from ToString
+    std::string                  ToString(eToStringFormat format = kTabs);
 
     bool                    Write(cZZFile& file);   // assumes must be written at end of file
 
@@ -272,12 +271,12 @@ public:
     uint16_t                mInternalFileAttributes;        // 36
     uint32_t                mExternalFileAttributes;        // 38
     uint64_t                mLocalFileHeaderOffset;         // 42       32bit for regular zip.  kept here as 64 bit (and from Zip64ExtendedInfo field) for Zip64
-    string                  mFileName;                      // 46
+    std::string                  mFileName;                      // 46
     tExtensibleFieldList    mExtensibleFieldList;           // 46 + mFilenameLength;
-    string                  mFileComment;                   // 46 + mFilenameLength + mExtraFieldLength;
+    std::string                  mFileComment;                   // 46 + mFilenameLength + mExtraFieldLength;
 };
 
-typedef list<cCDFileHeader> tCDFileHeaderList;
+typedef std::list<cCDFileHeader> tCDFileHeaderList;
 
 //////////////////////////////////////////////////////////////////////////////////////////
 class cZipCD
@@ -287,7 +286,7 @@ public:
     ~cZipCD();
 
     bool                    Init(cZZFile& httpFile);
-    bool                    GetFileHeader(const string& sFilename, cCDFileHeader& fileHeader);        // returns a header (if there is one) for the file in the zip package
+    bool                    GetFileHeader(const std::string& sFilename, cCDFileHeader& fileHeader);        // returns a header (if there is one) for the file in the zip package
     uint64_t                GetNumTotalEntries() { return mCDFileHeaderList.size(); }
     uint64_t                GetNumTotalFiles();
     uint64_t                GetNumTotalFolders();
@@ -297,7 +296,7 @@ public:
     bool                    Write(cZZFile& file);   // assumes must be written at end of file
     uint64_t                Size();     // size of CD in bytes
 
-    void                    DumpCD(std::ostream& out, const wstring& sPattern, bool bVerbose, eToStringFormat format);
+    void                    DumpCD(std::ostream& out, const std::string& sPattern, bool bVerbose, eToStringFormat format);
 
     tCDFileHeaderList       mCDFileHeaderList;
     cEndOfCDRecord          mEndOfCDRecord;

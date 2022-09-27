@@ -21,9 +21,6 @@
 
 #include <string>
 #include <regex>
-#include <boost/algorithm/string/replace.hpp>
 
-using namespace std;
-
-bool FNMatch(const string& pattern, const string& search);
-bool FNMatch(const wstring& pattern, const wstring& search);
+bool FNMatch(const std::string& pattern, const std::string& search);
+bool FNMatch(const std::wstring& pattern, const std::wstring& search);

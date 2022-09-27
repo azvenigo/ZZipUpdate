@@ -9,6 +9,23 @@
 
 #include "FNMatch.h"
 
+using namespace std;
+
+template<class S>
+void findAndReplaceAll(S& data, const S& toSearch, const S& replaceStr)
+{
+    // Get the first occurrence
+    size_t pos = data.find(toSearch);
+    // Repeat till end is reached
+    while (pos != S::npos)
+    {
+        // Replace this occurrence of Sub String
+        data.replace(pos, toSearch.size(), replaceStr);
+        // Get the next occurrence from the current position
+        pos = data.find(toSearch, pos + replaceStr.size());
+    }
+}
+
 bool FNMatch(const string& pattern, const string& search)
 {
     if ((pattern.empty() || pattern == "*"))  // if we're not matching everything
@@ -18,9 +35,9 @@ bool FNMatch(const string& pattern, const string& search)
         return true;
 
     string sPatternToUse(pattern);
-    boost::ireplace_all(sPatternToUse, "\\", "/");  // all backslashes to forward
-    boost::ireplace_all(sPatternToUse, "/", "./");  //  regex escape slashes
-    boost::ireplace_all(sPatternToUse, "*", ".*");  // regex escape wildcard * with .*
+    findAndReplaceAll(sPatternToUse, string("\\"), string("/"));
+    findAndReplaceAll(sPatternToUse, string("/"), string("./"));
+    findAndReplaceAll(sPatternToUse, string("*"), string(".*"));
 
     std::regex patternRegEx(sPatternToUse, std::regex_constants::ECMAScript | std::regex_constants::icase);
     return regex_match(search, patternRegEx);
@@ -35,9 +52,9 @@ bool FNMatch(const wstring& pattern, const wstring& search)
         return true;
 
     wstring sPatternToUse(pattern);
-    boost::ireplace_all(sPatternToUse, "\\", "/");  // all backslashes to forward
-    boost::ireplace_all(sPatternToUse, "/", "./");  //  regex escape slashes
-    boost::ireplace_all(sPatternToUse, "*", ".*");  // regex escape wildcard * with .*
+    findAndReplaceAll(sPatternToUse, wstring(L"\\"), wstring(L"/"));
+    findAndReplaceAll(sPatternToUse, wstring(L"/"), wstring(L"./"));
+    findAndReplaceAll(sPatternToUse, wstring(L"*"), wstring(L".*"));
 
     std::wregex patternRegEx(sPatternToUse, std::regex_constants::ECMAScript | std::regex_constants::icase);
     return regex_match(search, patternRegEx);

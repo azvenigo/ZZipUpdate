@@ -16,14 +16,13 @@
 #include <string>
 #include <list>
 #include <stdint.h>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include "ZipHeaders.h"
 #include "ZipJob.h"
 #include "zlib.h"
 #include "common/ZZFileAPI.h"
 
-using namespace std;
-using namespace boost::filesystem;
+//using namespace std;
 
 class ZZipAPI
 {
@@ -37,23 +36,23 @@ public:
         kZipCreate = 1      // For creating new Zips
     };
 
-    bool			        Init(const wstring& sFilename, eOpenType openType = kZipOpen, int32_t nCompressionLevel = Z_DEFAULT_COMPRESSION);
+    bool			        Init(const std::string& sFilename, eOpenType openType = kZipOpen, int32_t nCompressionLevel = Z_DEFAULT_COMPRESSION, const std::string& sName = "", const std::string& sPassword = "");
     bool                    Shutdown();
 
     // Accessors
-    wstring                 GetZipFilename() const { return msZipURL; }
+    std::string                 GetZipFilename() const { return msZipURL; }
     cZipCD&                 GetZipCD() { return mZipCD;  }
 
     // Commands for existing Zips
-    void                    DumpReport(const wstring& sOutputFilename);
-    bool                    DecompressToBuffer(const wstring& sFilename, uint8_t* pOutputBuffer, Progress* pProgress = nullptr);    // output buffer must be large enough to hold entire output
-    bool                    DecompressToFile(const wstring& sFilename, const wstring& sOutputFilename, Progress* pProgress = nullptr);
-    bool                    DecompressToFolder(const wstring& sPattern, const wstring& sOutputFolder, Progress* pProgress = nullptr);
-    bool                    ExtractRawStream(const wstring& sFilename, const wstring& sOutputFilename, Progress* pProgress = nullptr);
+    void                    DumpReport(const std::string& sOutputFilename);
+    bool                    DecompressToBuffer(const std::string& sFilename, uint8_t* pOutputBuffer, Progress* pProgress = nullptr);    // output buffer must be large enough to hold entire output
+    bool                    DecompressToFile(const std::string& sFilename, const std::string& sOutputFilename, Progress* pProgress = nullptr);
+    bool                    DecompressToFolder(const std::string& sPattern, const std::string& sOutputFolder, Progress* pProgress = nullptr);
+    bool                    ExtractRawStream(const std::string& sFilename, const std::string& sOutputFilename, Progress* pProgress = nullptr);
 
     // Commands for creating new Zips
-    bool                    AddToZipFile(const wstring& sFilename, const wstring& sBaseFolder, Progress* pProgress = nullptr);  // Only usable if zip file was open with kZipCreate
-    bool                    AddToZipFileFromBuffer(uint8_t* nInputBufferSize, uint32_t nBufferSize, const wstring& sFilename, Progress* pProgress = nullptr);       // filename is the relative path within the zipfile 
+    bool                    AddToZipFile(const std::string& sFilename, const std::string& sBaseFolder, Progress* pProgress = nullptr);  // Only usable if zip file was open with kZipCreate
+    bool                    AddToZipFileFromBuffer(uint8_t* nInputBufferSize, uint32_t nBufferSize, const std::string& sFilename, Progress* pProgress = nullptr);       // filename is the relative path within the zipfile 
 
 private:
     bool                    OpenForReading();
@@ -61,8 +60,10 @@ private:
 
     eOpenType               mOpenType;              // kZipOpen or kZipCreate
     int32_t                 mnCompressionLevel;     // Valid ranges from -1 (default) to 9.
-    wstring                 msZipURL;               // path to the zip archive or URL
-    shared_ptr<cZZFile>     mpZZFile;               // Abstraction to local file or HTTP file
+    std::string                 msZipURL;               // path to the zip archive or URL
+    std::string                 msName;
+    std::string                 msPassword;
+    std::shared_ptr<cZZFile>     mpZZFile;               // Abstraction to local file or HTTP file
     cZipCD                  mZipCD;                 // Zip Central Directory including all headers
     bool                    mbInitted;
 };

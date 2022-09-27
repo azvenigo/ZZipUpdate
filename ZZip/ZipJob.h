@@ -41,9 +41,10 @@ public:
     ~ZipJob();
 
     // Configuration API
-    void SetURL(const wstring& sURL)                { msPackageURL = sURL; }
-    void SetBaseFolder(const wstring& sBaseFolder);
-    void SetPattern(const wstring& sPattern)        { msPattern = sPattern; }
+    void SetURL(const std::string& sURL)                { msPackageURL = sURL; }
+    void SetNamePassword(const std::string& sName, const std::string& sPassword) { msName = sName; msPassword = sPassword; }
+    void SetBaseFolder(const std::string& sBaseFolder);
+    void SetPattern(const std::string& sPattern)        { msPattern = sPattern; }
     void SetSkipCRC(bool bSkip)                     { mbSkipCRC = bSkip; }
     void SetKillHoldingProcess(bool bKill)          { mbKillHoldingProcess = bKill; }
     void SetNumThreads(uint32_t nThreads)           { if (!mbVerbose) mnThreads = nThreads; }   // verbose mode is single threaded
@@ -60,7 +61,7 @@ public:
     Progress GetProgress() { return mJobProgress; } // makes a copy
 
 private:
-    bool FileNeedsUpdate(const wstring& sPath, uint64_t nComparedFileSize, uint32_t nComparedFileCRC);
+    bool FileNeedsUpdate(const std::string& sPath, uint64_t nComparedFileSize, uint32_t nComparedFileCRC);
 
     static void RunDecompressionJob(void* pContext);
     static void RunCompressionJob(void* pContext);
@@ -71,9 +72,11 @@ private:
     std::mutex          mMutex;
 
     eJobType            mJobType;           
-    wstring             msPackageURL;           // source package URL
-    wstring             msBaseFolder;           // Destination base folder. (default is the folder of ZZipUpdate.exe)
-    wstring             msPattern;              // wildcard pattern to match (example "*base*/*.exe"  matches all directories that have the string "base" in them and in those directories all files that end in .exe)
+    std::string             msPackageURL;           // source package URL
+    std::string             msName;                 // Auth
+    std::string             msPassword;             // Auth
+    std::string             msBaseFolder;           // Destination base folder. (default is the folder of ZZipUpdate.exe)
+    std::string             msPattern;              // wildcard pattern to match (example "*base*/*.exe"  matches all directories that have the string "base" in them and in those directories all files that end in .exe)
     bool                mbSkipCRC;              // If true, skips CRC diff and syncs down all files that match pattern
     bool                mbKillHoldingProcess;   // If true, kills the process holding a necessary file open
     uint32_t            mnThreads;              // How many threads to use

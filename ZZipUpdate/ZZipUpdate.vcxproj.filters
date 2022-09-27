@@ -96,6 +96,9 @@
     <ClCompile Include="..\common\zlib-1.2.11\trees.c">
       <Filter>zlib-1.2.11</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ZLibraries\Common\helpers\CommandLineParser.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\common\StringHelpers.h">
@@ -157,6 +160,9 @@
     </ClInclude>
     <ClInclude Include="..\common\zlib-1.2.11\zutil.h">
       <Filter>zlib-1.2.11</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ZLibraries\Common\helpers\CommandLineParser.h">
+      <Filter>Helpers</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

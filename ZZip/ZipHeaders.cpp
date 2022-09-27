@@ -8,7 +8,7 @@
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "ZipHeaders.h"
-#include <boost/lexical_cast.hpp>
+//#include <boost/lexical_cast.hpp>
 #include <time.h>
 #include <ctime>
 #include <filesystem>
@@ -852,7 +852,7 @@ uint64_t cZipCD::Size()
     return nSize;
 }
 
-void cZipCD::DumpCD(std::ostream& out, const wstring& sPattern, bool bVerbose, eToStringFormat format)
+void cZipCD::DumpCD(std::ostream& out, const string& sPattern, bool bVerbose, eToStringFormat format)
 {
     int32_t nIndex = 0;
     if (bVerbose)
@@ -885,7 +885,7 @@ void cZipCD::DumpCD(std::ostream& out, const wstring& sPattern, bool bVerbose, e
     {
         cCDFileHeader& cdFileHeader = *it;
 
-        if (FNMatch(sPattern, string_to_wstring(cdFileHeader.mFileName).c_str()))
+        if (FNMatch(sPattern, cdFileHeader.mFileName.c_str()))
         {
             nPatternMatchingFiles++;
             if (bVerbose)
@@ -918,7 +918,7 @@ void cZipCD::DumpCD(std::ostream& out, const wstring& sPattern, bool bVerbose, e
     // If a pattern was specified then provide stats
     if (!sPattern.empty())
     {
-        out << "Found " << nPatternMatchingFiles << " out of " << GetNumTotalFiles() + GetNumTotalFolders() << " matching pattern: \"" << wstring_to_string(sPattern).c_str() << "\"\n";
+        out << "Found " << nPatternMatchingFiles << " out of " << GetNumTotalFiles() + GetNumTotalFolders() << " matching pattern: \"" << sPattern.c_str() << "\"\n";
     }
 
 

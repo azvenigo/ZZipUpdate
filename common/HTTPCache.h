@@ -9,14 +9,12 @@
 
 #pragma once
 #include <stdint.h>
-#include <boost/date_time.hpp>
+//#include <boost/date_time.hpp>
 #include <map>
 #include <mutex>
 
-using namespace std;
-
-const uint32_t kHTTPCacheLineSize = 1 * 1024 * 1024;
-const uint32_t kMaxCacheLines = 16;
+const uint32_t kHTTPCacheLineSize = 4 * 1024;
+const uint32_t kMaxCacheLines = 64;
 typedef std::pair<int64_t, int64_t> tIntPair;
 
 class HTTPCacheLine
@@ -32,12 +30,12 @@ public:
     int64_t                                     mnBaseOffset;
     int32_t                                     mnBufferData;
     uint8_t                                     mData[kHTTPCacheLineSize];
-    chrono::time_point<chrono::system_clock>    mRequestTime;
-    chrono::time_point<chrono::system_clock>    mFullfilledTime;
+    std::chrono::time_point<std::chrono::system_clock>    mRequestTime;
+    std::chrono::time_point<std::chrono::system_clock>    mFullfilledTime;
     tIntPair                                    mUnfullfilledInterval;  // lower and upper bounds of data that needs to be fullfilled
 };
 
-typedef map< uint64_t, shared_ptr<HTTPCacheLine> > tOffsetToHTTPCacheLineMap;
+typedef std::map< uint64_t, std::shared_ptr<HTTPCacheLine> > tOffsetToHTTPCacheLineMap;
 
 
 
@@ -47,14 +45,14 @@ public:
     HTTPCache();
     ~HTTPCache();
 
-    bool CheckOrReserve(int64_t nOffset, int32_t nBytes, shared_ptr<HTTPCacheLine>& pCacheLine);      // atomically checks if a byte range can be satisfied, if not reserves a new range for being filled. Returns true if it's a new reservation that requires fullfillment
+    bool CheckOrReserve(int64_t nOffset, int32_t nBytes, std::shared_ptr<HTTPCacheLine>& pCacheLine);      // atomically checks if a byte range can be satisfied, if not reserves a new range for being filled. Returns true if it's a new reservation that requires fullfillment
 
 protected:
-    shared_ptr<HTTPCacheLine> Reserve(int64_t nOffset);
+    std::shared_ptr<HTTPCacheLine> Reserve(int64_t nOffset);
 
     tOffsetToHTTPCacheLineMap mOffsetToHTTPCacheLineMap;
 
-    mutex mMutex;
+    std::mutex mMutex;
 
     // metrics
     uint64_t mnTotalBytesReserved;
